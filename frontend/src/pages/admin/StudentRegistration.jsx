@@ -26,6 +26,8 @@ const StudentRegistration = () => {
     const [activeTab, setActiveTab] = useState('SE');
     const [filterDivision, setFilterDivision] = useState('All');
     const [filterBatch, setFilterBatch] = useState('All');
+    const [filterEligibility, setFilterEligibility] = useState('All');
+    const [filterFeedbackGiven, setFilterFeedbackGiven] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     const [editingId, setEditingId] = useState(null);
@@ -309,11 +311,19 @@ const StudentRegistration = () => {
         const filteredStudents = studentList.filter(student => {
             const matchesDivision = filterDivision === 'All' || student.division === filterDivision;
             const matchesBatch = filterBatch === 'All' || student.practicalBatch === filterBatch;
+
+            const matchesEligibility = filterEligibility === 'All' ||
+                (filterEligibility === 'Eligible' ? student.eligibility : !student.eligibility);
+
+            const hasGivenFeedback = student.feedbackGiven?.theory || student.feedbackGiven?.practical;
+            const matchesFeedback = filterFeedbackGiven === 'All' ||
+                (filterFeedbackGiven === 'Yes' ? hasGivenFeedback : !hasGivenFeedback);
+
             const matchesSearch =
                 (student.grNo && student.grNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 (student.username && student.username.toLowerCase().includes(searchQuery.toLowerCase()));
 
-            return matchesDivision && matchesBatch && matchesSearch;
+            return matchesDivision && matchesBatch && matchesSearch && matchesEligibility && matchesFeedback;
         });
 
         // Sort by Division then GR No
@@ -556,15 +566,31 @@ const StudentRegistration = () => {
                 <div className="list-controls">
                     <div className="filter-group">
                         <input type="text" placeholder="Search by GR No or Username..." className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+
                         <label>Division:</label>
                         <select value={filterDivision} onChange={(e) => setFilterDivision(e.target.value)} className="filter-select">
                             <option value="All">All</option>
                             {divisions.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
+
                         <label>Batch:</label>
                         <select value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} className="filter-select">
                             <option value="All">All</option>
                             {batches.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+
+                        <label>Eligible:</label>
+                        <select value={filterEligibility} onChange={(e) => setFilterEligibility(e.target.value)} className="filter-select">
+                            <option value="All">All</option>
+                            <option value="Eligible">Yes</option>
+                            <option value="Not Eligible">No</option>
+                        </select>
+
+                        <label>Feedback:</label>
+                        <select value={filterFeedbackGiven} onChange={(e) => setFilterFeedbackGiven(e.target.value)} className="filter-select">
+                            <option value="All">All</option>
+                            <option value="Yes">Given</option>
+                            <option value="No">Pending</option>
                         </select>
                     </div>
                 </div>
@@ -629,8 +655,17 @@ const StudentRegistration = () => {
                             {studentList.filter(student => {
                                 const matchesDivision = filterDivision === 'All' || student.division === filterDivision;
                                 const matchesBatch = filterBatch === 'All' || student.practicalBatch === filterBatch;
+
+                                const matchesEligibility = filterEligibility === 'All' ||
+                                    (filterEligibility === 'Eligible' ? student.eligibility : !student.eligibility);
+
+                                const hasGivenFeedback = student.feedbackGiven?.theory || student.feedbackGiven?.practical;
+                                const matchesFeedback = filterFeedbackGiven === 'All' ||
+                                    (filterFeedbackGiven === 'Yes' ? hasGivenFeedback : !hasGivenFeedback);
+
                                 const matchesSearch = (student.grNo && student.grNo.toLowerCase().includes(searchQuery.toLowerCase())) || (student.username && student.username.toLowerCase().includes(searchQuery.toLowerCase()));
-                                return matchesDivision && matchesBatch && matchesSearch;
+
+                                return matchesDivision && matchesBatch && matchesSearch && matchesEligibility && matchesFeedback;
                             }).length} Students
                         </span>
                     </div>

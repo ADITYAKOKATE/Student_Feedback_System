@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     submitFeedback,
+    resetFeedback,
     getFeedbackReports,
     getFeedbackSummary,
     getFeedbackByFaculty,
@@ -13,6 +14,9 @@ const router = express.Router();
 
 // Submit feedback (Student only)
 router.post('/submit', protectStudent, submitFeedback);
+
+// Reset feedback (Student only - for testing/correction)
+router.delete('/reset', protectStudent, resetFeedback);
 
 // Get feedback summary (Admin only)
 router.get('/summary', authenticate, isAdmin, getFeedbackSummary);

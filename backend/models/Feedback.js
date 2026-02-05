@@ -7,18 +7,6 @@ const feedbackSchema = new mongoose.Schema(
             ref: 'Student',
             required: true,
         },
-        faculty: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Faculty',
-            required: function () {
-                return this.feedbackType === 'theory' || this.feedbackType === 'practical';
-            },
-        },
-        feedbackType: {
-            type: String,
-            required: [true, 'Feedback type is required'],
-            enum: ['theory', 'practical', 'library', 'other_facilities'],
-        },
         department: {
             type: String,
             required: true,
@@ -34,16 +22,59 @@ const feedbackSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
-        // Feedback ratings - can be customized based on actual feedback form
-        ratings: {
-            type: Map,
-            of: Number,
-            // Example: { "teaching_quality": 5, "communication": 4, "subject_knowledge": 5 }
+        // Theory Feedback Section
+        theory: [{
+            faculty: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Faculty',
+            },
+            subject: String,
+            ratings: {
+                type: Map,
+                of: Number,
+            },
+            comments: {
+                type: String,
+                default: ''
+            }
+        }],
+        // Practical Feedback Section
+        practical: [{
+            faculty: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Faculty',
+            },
+            subject: String,
+            ratings: {
+                type: Map,
+                of: Number,
+            },
+            comments: {
+                type: String,
+                default: ''
+            }
+        }],
+        // Library Feedback
+        library: {
+            ratings: {
+                type: Map,
+                of: Number,
+            },
+            comments: {
+                type: String,
+                default: ''
+            }
         },
-        comments: {
-            type: String,
-            trim: true,
-            default: '',
+        // Other Facilities Feedback
+        facilities: {
+            ratings: {
+                type: Map,
+                of: Number,
+            },
+            comments: {
+                type: String,
+                default: ''
+            }
         },
         submittedAt: {
             type: Date,
@@ -55,11 +86,8 @@ const feedbackSchema = new mongoose.Schema(
     }
 );
 
-// Create compound indexes for efficient queries
-feedbackSchema.index({ faculty: 1, feedbackType: 1 });
-feedbackSchema.index({ student: 1, feedbackType: 1 });
-feedbackSchema.index({ department: 1, class: 1, division: 1, feedbackType: 1 });
-feedbackSchema.index({ submittedAt: -1 });
+// Index to ensure one submission per student (you might want to scope this by term/semester later)
+feedbackSchema.index({ student: 1 }, { unique: true });
 
 const Feedback = mongoose.model('Feedback', feedbackSchema);
 

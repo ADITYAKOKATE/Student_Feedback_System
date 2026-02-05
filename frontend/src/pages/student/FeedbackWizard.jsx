@@ -13,6 +13,8 @@ const FeedbackWizard = () => {
     const [message, setMessage] = useState({ type: '', text: '' });
     const [studentInfo, setStudentInfo] = useState(null);
 
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
     // Questions Data
     const questions = feedbackQuestions;
 
@@ -36,11 +38,6 @@ const FeedbackWizard = () => {
                 return;
             }
 
-            // Set custom header for student token manually since interceptor might default to admin token? 
-            // Actually, if we use the same `api` instance and `localStorage.setItem('token', ...)` it might conflict
-            // Admin uses 'token', Student uses 'studentToken'. 
-            // We need to ensure Axios uses the correct token.
-            // For now, let's manually pass it in headers.
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
@@ -49,6 +46,7 @@ const FeedbackWizard = () => {
             if (response.data.success) {
                 setFormData(response.data.data);
                 setStudentInfo(response.data.data.studentInfo);
+                setIsSubmitted(response.data.data.isSubmitted);
             }
         } catch (error) {
             console.error(error);
@@ -65,7 +63,7 @@ const FeedbackWizard = () => {
     const handleRatingChange = (section, id, questionIndex, value) => {
         setResponses(prev => ({
             ...prev,
-            [`${section}-${id}-${questionIndex}`]: value
+            [`${section}-${id}-${questionIndex}`]: parseInt(value)
         }));
     };
 
@@ -73,7 +71,18 @@ const FeedbackWizard = () => {
     const handleGenericRatingChange = (section, questionIndex, value) => {
         setResponses(prev => ({
             ...prev,
-            [`${section}-general-${questionIndex}`]: value
+            [`${section}-general-${questionIndex}`]: questionIndex === (questions.library.length - 1) && section === 'library' || questionIndex === (questions.facilities.length - 1) && section === 'facilities' ? value : parseInt(value)
+        }));
+    };
+
+    // Note: The above logic for generically handling text vs number needs checking index carefully.
+    // Library: 5 questions. Indexes 0-3 are ratings. Index 4 is text.
+    // Facilities: 13 questions. Indexes 0-11 are ratings. Index 12 is text.
+
+    const handleTextChange = (section, idx, value) => {
+        setResponses(prev => ({
+            ...prev,
+            [`${section}-general-${idx}`]: value
         }));
     };
 
@@ -81,7 +90,6 @@ const FeedbackWizard = () => {
         if (!formData) return false;
 
         if (tabName === 'theory') {
-            // Check if all questions for all theory faculty are answered
             return formData.theoryFaculty.every(faculty =>
                 questions.theory.every((_, qIndex) => responses[`theory-${faculty._id}-${qIndex}`])
             );
@@ -92,11 +100,11 @@ const FeedbackWizard = () => {
             );
         }
         if (tabName === 'library') {
-            // Last question is suggestions (text), others are ratings
+            // Check first 4 ratings
             return questions.library.slice(0, 4).every((_, qIndex) => responses[`library-general-${qIndex}`]);
         }
         if (tabName === 'facilities') {
-            // Last question is suggestions (text)
+            // Check first 12 ratings
             return questions.facilities.slice(0, 12).every((_, qIndex) => responses[`facilities-general-${qIndex}`]);
         }
         return false;
@@ -111,104 +119,102 @@ const FeedbackWizard = () => {
         if (!window.confirm("Are you sure you want to submit? You cannot edit after submission.")) return;
 
         setLoading(true);
-        // Transform responses into API payload
-        // This part needs careful mapping
-        /* 
-           Payload structure expected by backend?
-           Backend expects single feedback objects? Or specific endpoint?
-           We created general `submitFeedback` endpoint in the past which takes:
-           { facultyId, feedbackType, ratings (Map), comments }
-           
-           We should probably hit the endpoint multiple times or update backend to accept bulk.
-           Actually, the backend `submitFeedback` handles one at a time.
-           Ideally we should create a `bulkSubmitFeedback` endpoint. 
-           But to save time, let's loop client side or (better) create a new endpoint.
-           
-           Let's update plan: create `submitBulkFeedback` end point later? 
-           Checking `feedbackController.js`, `submitFeedback` is for single.
-           
-           Let's loop for now (easier implemented without changing backend again immediately).
-        */
-
         const token = localStorage.getItem('studentToken');
         const config = { headers: { Authorization: `Bearer ${token}` } };
 
         try {
-            // Submit Theory
-            for (const faculty of formData.theoryFaculty) {
+            // Construct Theory Array
+            const theory = formData.theoryFaculty.map(faculty => {
                 const ratings = {};
                 questions.theory.forEach((q, i) => ratings[`q${i + 1}`] = responses[`theory-${faculty._id}-${i}`]);
-                await api.post('/feedback/submit', {
-                    facultyId: faculty._id,
-                    feedbackType: 'theory',
+                return {
+                    faculty: faculty._id,
+                    subject: faculty.subjectName,
                     ratings,
                     comments: ''
-                }, config);
-            }
+                };
+            });
 
-            // Submit Practical
-            for (const faculty of formData.practicalFaculty) {
+            // Construct Practical Array
+            const practical = formData.practicalFaculty.map(faculty => {
                 const ratings = {};
                 questions.practical.forEach((q, i) => ratings[`q${i + 1}`] = responses[`practical-${faculty._id}-${i}`]);
-                await api.post('/feedback/submit', {
-                    facultyId: faculty._id,
-                    feedbackType: 'practical',
+                return {
+                    faculty: faculty._id,
+                    subject: faculty.subjectName,
                     ratings,
                     comments: ''
-                }, config);
-            }
+                };
+            });
 
-            // Submit Library (Need a dummy faculty or handle in backend? Model requires Faculty ID)
-            // Issue: Model requires Faculty ID. 
-            // Fix: We need a "General" faculty or update backend to make faculty fully optional.
-            // I updated model to make faculty optional for library/facilities.
-            // But `submitFeedback` controller checks `if (!facultyId) ...`.
-            // I need to update `submitFeedback` controller to handle optional facultyId.
-
-            // STOP: I need to fix backend controller first.
-
-            // Assuming I fix it:
+            // Construct Library Object
             const libRatings = {};
             questions.library.slice(0, 4).forEach((q, i) => libRatings[`q${i + 1}`] = responses[`library-general-${i}`]);
-            await api.post('/feedback/submit', {
-                feedbackType: 'library',
+            const library = {
                 ratings: libRatings,
-                comments: responses[`library-general-4`] || '' // Suggestions
-            }, config);
+                comments: responses[`library-general-4`] || '' // Suggestion is the last one (index 4)
+            };
 
+            // Construct Facilities Object
             const facRatings = {};
             questions.facilities.slice(0, 12).forEach((q, i) => facRatings[`q${i + 1}`] = responses[`facilities-general-${i}`]);
-            await api.post('/feedback/submit', {
-                feedbackType: 'other_facilities',
+            const facilities = {
                 ratings: facRatings,
-                comments: responses[`facilities-general-12`] || '' // Suggestions
-            }, config);
+                comments: responses[`facilities-general-12`] || '' // Suggestion is the last one (index 12)
+            };
+
+            const payload = { theory, practical, library, facilities };
+
+            await api.post('/feedback/submit', payload, config);
 
             setMessage({ type: 'success', text: 'Feedback submitted successfully!' });
-            setTimeout(() => {
-                localStorage.removeItem('studentToken');
-                navigate('/student/login');
-            }, 2000);
+            setIsSubmitted(true); // Update local state to show success screen immediately
 
         } catch (error) {
             console.error(error);
-            setMessage({ type: 'error', text: 'Error submitting feedback. Please try again.' });
+            setMessage({ type: 'error', text: error.response?.data?.message || 'Error submitting feedback. Please try again.' });
             setLoading(false);
         }
     };
 
     if (loading && !formData) return <div className="loader">Loading...</div>;
 
+    if (isSubmitted) {
+        return (
+            <div className="feedback-wizard submitted-state">
+                <div className="card text-center p-5">
+                    <div className="mb-4">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" fill="#4CAF50" stroke="#4CAF50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M7.75 12.75L10.58 15.58L16.25 9.92001" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                    <h3>Feedback Already Submitted</h3>
+                    <p className="text-muted mt-2">Thank you for your valuable feedback! Your response has been recorded.</p>
+                    <button className="btn btn-primary mt-4" onClick={() => {
+                        localStorage.removeItem('studentToken');
+                        navigate('/student/login');
+                    }}>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="feedback-wizard">
             <header className="wizard-header">
-                <h3>Student Feedback</h3>
-                {studentInfo && (
-                    <div className="student-badge">
-                        <span>{studentInfo.class} {studentInfo.division} {studentInfo.department}</span>
-                        <span>{new Date().toDateString()}</span>
-                    </div>
-                )}
+                <div className="header-content">
+                    <h3>Student Feedback</h3>
+                    {studentInfo && (
+                        <div className="student-badge">
+                            <span>{studentInfo.class} {studentInfo.division} {studentInfo.department}</span>
+                            <span>{new Date().toDateString()}</span>
+                        </div>
+                    )}
+                </div>
+                {/* Reset button removed as per requirement */}
             </header>
 
             {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
@@ -293,7 +299,7 @@ const FeedbackWizard = () => {
                                         className="suggestion-box"
                                         placeholder="Enter suggestions here..."
                                         value={responses[`library-general-${idx}`] || ''}
-                                        onChange={(e) => handleGenericRatingChange('library', idx, e.target.value)}
+                                        onChange={(e) => handleTextChange('library', idx, e.target.value)}
                                     />
                                 )}
                             </div>
@@ -323,7 +329,7 @@ const FeedbackWizard = () => {
                                         className="suggestion-box"
                                         placeholder="Enter suggestions here..."
                                         value={responses[`facilities-general-${idx}`] || ''}
-                                        onChange={(e) => handleGenericRatingChange('facilities', idx, e.target.value)}
+                                        onChange={(e) => handleTextChange('facilities', idx, e.target.value)}
                                     />
                                 )}
                             </div>
