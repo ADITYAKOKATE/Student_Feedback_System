@@ -1,0 +1,43 @@
+Logging in...
+Login successful.
+Step 1: Uploading initial student...
+Initial Upload Response: {
+  "success": true,
+  "message": "Bulk processing complete. Matched: 0, Modified: 0, Upserted: 1",
+  "count": 1,
+  "result": {
+    "insertedCount": 0,
+    "matchedCount": 0,
+    "modifiedCount": 0,
+    "deletedCount": 0,
+    "upsertedCount": 1,
+    "upsertedIds": {
+      "0": "6985061522e2a9d153f0556a"
+    },
+    "insertedIds": {}
+  }
+}
+Step 2: Uploading SAME student with Division B...
+Update Upload Response: {
+  "success": true,
+  "message": "Bulk processing complete. Matched: 1, Modified: 1, Upserted: 0",
+  "count": 1,
+  "result": {
+    "insertedCount": 0,
+    "matchedCount": 1,
+    "modifiedCount": 1,
+    "deletedCount": 0,
+    "upsertedCount": 0,
+    "upsertedIds": {},
+    "insertedIds": {}
+  }
+}
+Step 3: Verifying change...
+Array length: 4
+Item 0: GR="TEST_BULK_999", Div="B"
+Item 1: GR="GR2024003", Div="B"
+Item 2: GR="GR2024002", Div="A"
+Item 3: GR="GR2024001", Div="A"
+Student found. Division: B
+VERIFICATION SUCCESS: Division updated to B.
+Cleanup: Test student deleted.

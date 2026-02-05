@@ -1,0 +1,205 @@
+.reports-container {
+    padding: var(--spacing-xl);
+    animation: fadeIn 0.6s ease-out;
+}
+
+.reports-container .page-title {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-xl);
+}
+
+.reports-loading,
+.reports-error {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.stat-card {
+    background: var(--white);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    transition: transform 0.3s ease;
+    border-left: 4px solid var(--accent-color);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-card h3 {
+    font-size: 0.9rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--spacing-sm);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: var(--spacing-xs);
+}
+
+.stat-card.highlight {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.stat-card.highlight h3,
+.stat-card.highlight .stat-value,
+.stat-card.highlight .stat-label {
+    color: var(--white);
+}
+
+.progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    margin-top: var(--spacing-md);
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    background: var(--success-color);
+    border-radius: 3px;
+    transition: width 1s ease-out;
+}
+
+/* Charts Grid */
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.chart-container {
+    background: var(--white);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    height: 400px;
+    position: relative;
+}
+
+.chart-container h3 {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+/* Top Faculty Section */
+.top-faculty-section {
+    background: var(--white);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.top-faculty-section h3 {
+    margin-bottom: var(--spacing-lg);
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--light-gray);
+    padding-bottom: var(--spacing-sm);
+}
+
+.top-faculty-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+}
+
+.top-faculty-table th {
+    text-align: left;
+    color: var(--gray);
+    font-size: 0.9rem;
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.top-faculty-table td {
+    background: #f8f9fa;
+    padding: var(--spacing-md);
+    vertical-align: middle;
+}
+
+.top-faculty-table tr:first-child td {
+    border-top: none;
+}
+
+.top-faculty-table tr:hover td {
+    background: #eef2f7;
+}
+
+.rank-badge {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--white);
+    background: var(--gray);
+}
+
+.rank-1 {
+    background: #f1c40f;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+}
+
+.rank-2 {
+    background: #95a5a6;
+}
+
+.rank-3 {
+    background: #d35400;
+}
+
+.rating-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--success-color);
+    color: var(--white);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.star {
+    font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container {
+        height: 300px;
+    }
+}

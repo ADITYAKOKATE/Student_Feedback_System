@@ -1,0 +1,361 @@
+.student-registration {
+    padding: var(--spacing-xl) 0;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.student-section {
+    margin-top: var(--spacing-2xl);
+    animation: sectionSlide 0.6s ease-out backwards;
+}
+
+.student-section:nth-of-type(2) {
+    animation-delay: 0.2s;
+}
+
+.student-section:nth-of-type(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes sectionSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.action-buttons .btn {
+    white-space: nowrap;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.action-buttons .btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s, height 0.5s;
+}
+
+.action-buttons .btn:hover::after {
+    width: 200px;
+    height: 200px;
+}
+
+.action-buttons .btn:hover {
+    transform: translateY(-2px) scale(1.05);
+}
+
+.action-buttons .btn:active {
+    transform: translateY(0) scale(1);
+}
+
+/* Stagger animation for table rows */
+.student-section tbody tr {
+    animation: rowFadeIn 0.4s ease-out backwards;
+}
+
+.student-section tbody tr:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.student-section tbody tr:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.student-section tbody tr:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.student-section tbody tr:nth-child(4) {
+    animation-delay: 0.25s;
+}
+
+.student-section tbody tr:nth-child(5) {
+    animation-delay: 0.3s;
+}
+
+.student-section tbody tr:nth-child(6) {
+    animation-delay: 0.35s;
+}
+
+.student-section tbody tr:nth-child(7) {
+    animation-delay: 0.4s;
+}
+
+.student-section tbody tr:nth-child(8) {
+    animation-delay: 0.45s;
+}
+
+@keyframes rowFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Enhanced section header */
+.student-section .section-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: var(--white);
+    padding: 1rem 1.5rem;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.student-section .section-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: headerShine 3s infinite;
+}
+
+@keyframes headerShine {
+    0% {
+        left: -100%;
+    }
+
+    50%,
+    100% {
+        left: 100%;
+    }
+}
+
+.student-section .section-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #1abc9c, #3498db, #9b59b6);
+}
+
+.student-section .section-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 1;
+    color: var(--white) !important;
+}
+
+.student-section .table-container {
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Default Action Toolbar (Desktop) */
+.action-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #eef2f7;
+    border-radius: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.toolbar-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .action-buttons button {
+        width: 100%;
+    }
+}
+
+/* Mobile Phones (max-width: 480px) */
+@media (max-width: 480px) {
+    .student-registration {
+        padding: var(--spacing-md) 0;
+    }
+
+    /* Stack Search and Filter */
+    .list-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .list-controls .filter-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .search-input {
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Make dropdowns side-by-side on mobile */
+    .filter-select {
+        flex: 1;
+        min-width: 45%;
+    }
+
+    .list-controls label {
+        display: none;
+        /* Hide labels on mobile to save space */
+    }
+
+    /* Responsive Action Toolbar - Single Line Icons */
+    .action-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 10px !important;
+    }
+
+    .action-toolbar .selection-count {
+        text-align: center;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+
+    .toolbar-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+    }
+
+    /* Icon-only buttons for mobile */
+    .action-toolbar .btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .action-toolbar .btn .btn-text {
+        display: none;
+    }
+
+    /* Hide Table Header */
+    .student-section thead {
+        display: none;
+    }
+
+    /* Card View Implementation */
+    .student-section tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1rem;
+        position: relative;
+    }
+
+    .student-section td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+
+    .student-section td:last-child {
+        border-bottom: none;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 0.5rem;
+        padding-top: 1rem;
+    }
+
+    /* Add Labels via pseudo-elements */
+    .student-section td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .student-section table {
+        font-size: 0.85rem;
+    }
+
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+
+    .action-buttons .btn {
+        flex: 1 1 auto;
+        min-width: 120px;
+    }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+    .student-registration {
+        padding: var(--spacing-sm) 0;
+    }
+
+    .student-section {
+        margin-top: var(--spacing-lg);
+    }
+}

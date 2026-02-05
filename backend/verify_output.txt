@@ -1,0 +1,20 @@
+Logging in...
+Login successful.
+Step 1: Uploading initial student...
+Initial Upload Response: {
+  "success": false,
+  "message": "Error processing bulk registration",
+  "error": "Updating the path 'eligibility' would create a conflict at 'eligibility'"
+}
+Step 2: Uploading SAME student with Division B...
+Update Upload Response: {
+  "success": false,
+  "message": "Error processing bulk registration",
+  "error": "Updating the path 'eligibility' would create a conflict at 'eligibility'"
+}
+Step 3: Verifying change...
+Array length: 3
+Item 0: GR="GR2024003", Div="B"
+Item 1: GR="GR2024002", Div="A"
+Item 2: GR="GR2024001", Div="A"
+VERIFICATION FAILED: Student not found in list (despite logging?).
