@@ -24,6 +24,14 @@ export const registerFaculty = async (req, res) => {
             });
         }
 
+        // Enforce Department Access
+        if (req.user.department !== 'All' && req.user.department !== department) {
+            return res.status(403).json({
+                success: false,
+                message: `Access denied. You can only register faculty for ${req.user.department} department.`,
+            });
+        }
+
         // Create faculty
         const faculty = await Faculty.create({
             facultyName,
@@ -58,8 +66,16 @@ export const getAllFaculty = async (req, res) => {
         const { department, class: className, division } = req.query;
 
         // Build filter object
+        // Build filter object
         const filter = {};
-        if (department) filter.department = department;
+
+        // Enforce Department Access
+        if (req.user.department !== 'All') {
+            filter.department = req.user.department;
+        } else if (department) {
+            filter.department = department;
+        }
+
         if (className) filter.class = className;
         if (division) filter.division = division;
         if (req.query.isElective) filter.isElective = req.query.isElective === 'true';
@@ -182,6 +198,17 @@ export const bulkRegisterFaculty = async (req, res) => {
 
         if (!Array.isArray(facultyArray) || facultyArray.length === 0) {
             return res.status(400).json({ success: false, message: 'Invalid data format. Expected an array of faculty.' });
+        }
+
+        // Enforce department check for Bulk Register
+        if (req.user.department !== 'All') {
+            const unauthorizedFaculty = facultyArray.filter(f => f.department !== req.user.department);
+            if (unauthorizedFaculty.length > 0) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Access denied. You contain faculty from other departments. You can only register for ${req.user.department}.`,
+                });
+            }
         }
 
         const result = await Faculty.insertMany(facultyArray);

@@ -5,35 +5,24 @@ import Student from '../models/Student.js';
 // @desc    Get overall statistics
 // @route   GET /api/reports/stats
 // @access  Private (Admin)
+// @desc    Get overall statistics
+// @route   GET /api/reports/stats
+// @access  Private (Admin)
 export const getOverallStats = async (req, res) => {
     try {
-        const totalFeedback = await Feedback.countDocuments();
-        const totalStudents = await Student.countDocuments();
-        const totalFaculty = await Faculty.countDocuments();
+        const query = {};
+        // Enforce department access
+        if (req.user.department !== 'All') {
+            query.department = req.user.department;
+        }
 
-        // Calculate average ratings
-        const averageRatings = await Feedback.aggregate([
-            {
-                $group: {
-                    _id: null,
-                    avgTheory: {
-                        $avg: {
-                            $cond: [{ $eq: ["$feedbackType", "theory"] }, { $avg: { $objectToArray: "$ratings.v" } }, null]
-                        }
-                    },
-                    // Note: This simple avg might fail if ratings is a Map. 
-                    // Let's use a robust approach for Map average.
-                    // Actually, since ratings is a Map, we can't directly $avg it easily without unwinding.
-                }
-            }
-        ]);
-
-        // Alternative simple aggregation for count is done. 
-        // For ratings, let's just get the feedback and calculate in JS if dataset is small, 
-        // OR use a better aggregation pipeline.
+        const totalFeedback = await Feedback.countDocuments(query);
+        const totalStudents = await Student.countDocuments(query);
+        const totalFaculty = await Faculty.countDocuments(query);
 
         // Improved Aggregation for Map ratings:
-        const stats = await Feedback.aggregate([
+        const pipeline = [
+            { $match: query },
             {
                 $project: {
                     feedbackType: 1,
@@ -50,7 +39,9 @@ export const getOverallStats = async (req, res) => {
                     count: { $sum: 1 }
                 }
             }
-        ]);
+        ];
+
+        const stats = await Feedback.aggregate(pipeline);
 
         const theoryStats = stats.find(s => s._id === 'theory') || { avgRating: 0, count: 0 };
         const practicalStats = stats.find(s => s._id === 'practical') || { avgRating: 0, count: 0 };
@@ -74,9 +65,19 @@ export const getOverallStats = async (req, res) => {
 // @desc    Get feedback count by department
 // @route   GET /api/reports/department-distribution
 // @access  Private (Admin)
+// @desc    Get feedback count by department
+// @route   GET /api/reports/department-distribution
+// @access  Private (Admin)
 export const getDepartmentDistribution = async (req, res) => {
     try {
+        const query = {};
+        // Enforce department access
+        if (req.user.department !== 'All') {
+            query.department = req.user.department;
+        }
+
         const distribution = await Feedback.aggregate([
+            { $match: query },
             {
                 $group: {
                     _id: "$department",
@@ -98,10 +99,23 @@ export const getDepartmentDistribution = async (req, res) => {
 // @desc    Get top performing faculty
 // @route   GET /api/reports/top-faculty
 // @access  Private (Admin)
+// @desc    Get top performing faculty
+// @route   GET /api/reports/top-faculty
+// @access  Private (Admin)
 export const getTopFaculty = async (req, res) => {
     try {
+        const query = { faculty: { $exists: true } };
+        // Enforce department access
+        if (req.user.department !== 'All') {
+            // Note: Feedback schema has 'department' which reflects student's department usually? 
+            // Or faculty's department? Ideally we should filter by faculty's department for Top Faculty list.
+            // But if Feedback stores the department where feedback was given, we can use that.
+            // Let's assume Feedback.department is consistent with Faculty.department for that feedback context.
+            query.department = req.user.department;
+        }
+
         const topFaculty = await Feedback.aggregate([
-            { $match: { faculty: { $exists: true } } },
+            { $match: query },
             {
                 $project: {
                     faculty: 1,

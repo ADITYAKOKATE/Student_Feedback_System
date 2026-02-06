@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { FaEdit, FaTrash, FaKey, FaCheckCircle, FaUndo } from 'react-icons/fa';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import './StudentRegistration.css';
 
 const StudentRegistration = () => {
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
         grNo: '',
         username: '',
         password: '',
-        department: 'Computer - AIML',
+        department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         class: 'SE', // Default to SE
         division: 'A',
         practicalBatch: 'A',
@@ -98,7 +100,7 @@ const StudentRegistration = () => {
             grNo: '',
             username: '',
             password: '',
-            department: 'Computer - AIML',
+            department: user?.department !== 'All' ? user.department : 'Computer - AIML',
             class: 'SE', // Default to SE
             division: 'A',
             practicalBatch: 'A',
@@ -114,7 +116,7 @@ const StudentRegistration = () => {
             grNo: student.grNo,
             username: student.username,
             password: '', // Don't populate password
-            department: student.department || 'Computer - AIML',
+            department: student.department || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
             class: student.class || 'SE',
             division: student.division || 'A',
             practicalBatch: student.practicalBatch || 'A',
@@ -276,10 +278,12 @@ const StudentRegistration = () => {
                     grNo: cols[0]?.trim(),
                     username: cols[1]?.trim(),
                     password: cols[2]?.trim(),
-                    department: cols[3]?.trim() || 'Computer - AIML',
+                    department: cols[3]?.trim() || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
                     class: cols[4]?.trim(),
                     division: cols[5]?.trim(),
-                    practicalBatch: cols[6]?.trim()
+                    practicalBatch: cols[6]?.trim(),
+                    eligibility: cols[7]?.trim().toLowerCase() === 'no' || cols[7]?.trim().toLowerCase() === 'false' ? false : true,
+                    electiveChosen: cols[8]?.trim() || ''
                 });
             }
 
@@ -293,7 +297,12 @@ const StudentRegistration = () => {
                 try {
                     const response = await api.post('/students/bulk-register', data);
                     if (response.data.success) {
-                        setMessage({ type: 'success', text: `Successfully registered ${response.data.count} students!` });
+                        // Check for partial success (207) or full success
+                        const isPartial = response.status === 207;
+                        setMessage({
+                            type: isPartial ? 'warning' : 'success',
+                            text: response.data.message || `Successfully registered ${response.data.count} students!`
+                        });
                         fetchStudents();
                     }
                 } catch (error) {
@@ -409,8 +418,8 @@ const StudentRegistration = () => {
     };
 
     const downloadSampleCSV = () => {
-        const headers = ["GR No", "Username", "Password", "Department", "Class", "Division", "Batch"];
-        const sampleData = ["SE2025001,john_doe,password123,Computer,SE,A,B"];
+        const headers = ["GR No", "Username", "Password", "Department", "Class", "Division", "Batch", "Eligibility", "Elective Selected"];
+        const sampleData = ["SE2025001,john_doe,password123,Computer,SE,A,B,Yes,Cloud Computing"];
 
         const csvContent = "data:text/csv;charset=utf-8,"
             + headers.join(",") + "\n"
@@ -471,7 +480,7 @@ const StudentRegistration = () => {
                         </button>
                     </div>
                     <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
-                        Format: GR No, Username, Password, Department, Class, Division, Practical Batch
+                        Format: GR No, Username, Password, Department, Class, Division, Practical Batch, Eligibility, Elective Selected
                     </p>
                     <input
                         type="file"
@@ -501,7 +510,16 @@ const StudentRegistration = () => {
                         </div>
                         <div className="form-group">
                             <label htmlFor="department" className="form-label">Department</label>
-                            <input type="text" id="department" name="department" className="form-input" value={formData.department} onChange={handleChange} required />
+                            <input
+                                type="text"
+                                id="department"
+                                name="department"
+                                className="form-input"
+                                value={formData.department}
+                                onChange={handleChange}
+                                required
+                                disabled={user?.department !== 'All'}
+                            />
                         </div>
                     </div>
                     <div className="form-row">

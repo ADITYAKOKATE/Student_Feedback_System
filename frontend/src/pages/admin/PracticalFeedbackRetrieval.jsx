@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import './FeedbackRetrieval.css';
 import { feedbackQuestions } from '../../utils/feedbackQuestions';
 
 const PracticalFeedbackRetrieval = () => {
+    const { user } = useAuth();
     const [filters, setFilters] = useState({
-        department: 'Computer - AIML',
+        department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         class: 'SE',
         division: 'SE A',
         fromDate: '',
@@ -110,6 +112,7 @@ const PracticalFeedbackRetrieval = () => {
                                 value={filters.department}
                                 onChange={handleChange}
                                 required
+                                disabled={user?.department !== 'All'}
                             />
                         </div>
 

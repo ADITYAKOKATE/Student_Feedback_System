@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import './FeedbackRetrieval.css';
 import { feedbackQuestions } from '../../utils/feedbackQuestions';
 
 const TheoryFeedbackRetrieval = () => {
+    const { user } = useAuth();
     const [filters, setFilters] = useState({
-        department: 'Computer - AIML',
+        department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         class: 'SE',
         division: 'All', // Changed default to 'All'
         fromDate: '',
@@ -164,6 +166,7 @@ const TheoryFeedbackRetrieval = () => {
                                 value={filters.department}
                                 onChange={handleChange}
                                 required
+                                disabled={user?.department !== 'All'}
                             />
                         </div>
 

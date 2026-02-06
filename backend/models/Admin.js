@@ -17,6 +17,12 @@ const adminSchema = new mongoose.Schema(
             default: 'admin',
             enum: ['admin'],
         },
+        department: {
+            type: String,
+            required: [true, 'Department is required'],
+            enum: ['Comps', 'IT', 'AIML', 'DS', 'Auto', 'All'],
+            default: 'All',
+        },
     },
     {
         timestamps: true,

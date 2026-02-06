@@ -138,6 +138,22 @@ const Header = () => {
                             Reports
                         </Link>
 
+                        {user?.role === 'admin' && (
+                            <span className="nav-link" style={{
+                                background: '#ffc107',
+                                color: '#000',
+                                fontWeight: 'bold',
+                                padding: '5px 10px',
+                                borderRadius: '20px',
+                                marginRight: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                            }}>
+                                👤 {user.username || 'Admin'}
+                            </span>
+                        )}
+
 
                         <button onClick={handleLogout} className="nav-link logout-btn">
                             Logout

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import './FeedbackRetrieval.css';
 import { feedbackQuestions } from '../../utils/feedbackQuestions';
 
 const FacilitiesFeedbackRetrieval = () => {
+    const { user } = useAuth();
     // We now store both types
     const [libraryFeedbacks, setLibraryFeedbacks] = useState([]);
     const [facilitiesFeedbacks, setFacilitiesFeedbacks] = useState([]);
@@ -12,7 +14,7 @@ const FacilitiesFeedbackRetrieval = () => {
     // Removed activeTab state, we default to showing both or just "Combined"
 
     const [filters, setFilters] = useState({
-        department: 'Computer - AIML',
+        department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         class: 'SE',
         division: 'All',
     });
@@ -150,7 +152,13 @@ const FacilitiesFeedbackRetrieval = () => {
                 <div className="form-row">
                     <div className="form-group">
                         <label className="form-label">Department</label>
-                        <select name="department" className="form-select" value={filters.department} onChange={handleFilterChange}>
+                        <select
+                            name="department"
+                            className="form-select"
+                            value={filters.department}
+                            onChange={handleFilterChange}
+                            disabled={user?.department !== 'All'}
+                        >
                             {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
                         </select>
                     </div>

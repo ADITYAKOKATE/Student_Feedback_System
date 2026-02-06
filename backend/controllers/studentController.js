@@ -45,6 +45,14 @@ export const registerStudent = async (req, res) => {
             });
         }
 
+        // Check for Department Access
+        if (req.user.department !== 'All' && req.user.department !== department) {
+            return res.status(403).json({
+                success: false,
+                message: `Access denied. You can only register students for ${req.user.department} department.`,
+            });
+        }
+
         // Create student
         const student = await Student.create({
             grNo: grNo.toUpperCase(),
@@ -94,6 +102,27 @@ export const bulkRegisterStudents = async (req, res) => {
             });
         }
 
+        // Enforce department check for Bulk Register
+        if (req.user.department !== 'All') {
+            const unauthorizedStudents = students.filter(s => s.department !== req.user.department);
+            if (unauthorizedStudents.length > 0) {
+                return res.status(403).json({
+                    success: false,
+                    message: `Access denied. You contain students from other departments. You can only register for ${req.user.department}.`,
+                });
+            }
+        }
+
+        // Validate required fields to prevent 500 errors
+        for (const student of students) {
+            if (!student.grNo || !student.username || !student.department) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid data: GR No, Username, and Department are required for all students. Missing in record: ${JSON.stringify(student)}`,
+                });
+            }
+        }
+
         const bulkOps = students.map(student => {
             // Normalize GR Number
             const grNo = student.grNo.toUpperCase();
@@ -130,11 +159,36 @@ export const bulkRegisterStudents = async (req, res) => {
             };
         });
 
-        const result = await Student.bulkWrite(bulkOps);
+        let result;
+        try {
+            result = await Student.bulkWrite(bulkOps, { ordered: false });
+        } catch (bulkError) {
+            if (bulkError.code === 11000 || bulkError.writeErrors) {
+                // Partial success case
+                const matched = bulkError.result?.nMatched || 0;
+                const modified = bulkError.result?.nModified || 0;
+                const upserted = bulkError.result?.nUpserted || 0;
+                const inserted = bulkError.result?.nInserted || 0; // Though we use upsert, counting might vary
+                const errorCount = bulkError.writeErrors?.length || 0;
+
+                return res.status(207).json({ // 207 Multi-Status
+                    success: true,
+                    message: `Processed with errors. Success: ${matched + upserted + modified}, Failed: ${errorCount}. (Likely duplicates)`,
+                    details: {
+                        matched, modified, upserted, errorCount,
+                        errors: bulkError.writeErrors.map(e => ({
+                            index: e.index,
+                            code: e.code,
+                            message: e.errmsg
+                        }))
+                    }
+                });
+            }
+            throw bulkError; // Re-throw other errors
+        }
 
         return res.status(201).json({
             success: true,
-            // message: `Processed ${students.length} students.`,
             message: `Bulk processing complete. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}, Upserted: ${result.upsertedCount}`,
             count: students.length,
             result: result
@@ -158,8 +212,16 @@ export const getAllStudents = async (req, res) => {
         const { department, class: className, division, practicalBatch } = req.query;
 
         // Build filter object
+        // Build filter object
         const filter = {};
-        if (department) filter.department = department;
+
+        // Enforce Department Access
+        if (req.user.department !== 'All') {
+            filter.department = req.user.department;
+        } else if (department) {
+            filter.department = department; // Super admin can filter
+        }
+
         if (className) filter.class = className;
         if (division) filter.division = division;
         if (practicalBatch) filter.practicalBatch = practicalBatch;

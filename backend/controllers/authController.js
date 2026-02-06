@@ -23,32 +23,61 @@ export const adminLogin = async (req, res) => {
             });
         }
 
-        // Check credentials against environment variables (hardcoded admin)
+        // 1. Check Env Var Super Admin
         if (
             username === process.env.ADMIN_USERNAME &&
             password === process.env.ADMIN_PASSWORD
         ) {
-            // Generate token
             const token = generateToken({
                 username: username,
                 role: 'admin',
+                department: 'All'
             });
 
             return res.status(200).json({
                 success: true,
-                message: 'Admin login successful',
+                message: 'Super Admin login successful',
                 token,
                 user: {
                     username,
                     role: 'admin',
+                    department: 'All'
                 },
             });
-        } else {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials',
+        }
+
+        // 2. Check Database Department Admin
+        // Import Admin model here if not imported at top, or ensure it is imported.
+        // Assuming: import Admin from '../models/Admin.js'; is needed.
+        // NOTE: I need to check imports in the file.
+
+        const admin = await import('../models/Admin.js').then(m => m.default.findOne({ username }));
+
+        if (admin && admin.password === password) { // ideally hash passwords, but keeping consistent with current codebase plaintext
+            const token = generateToken({
+                id: admin._id,
+                username: admin.username,
+                role: 'admin',
+                department: admin.department
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: `${admin.department} Admin login successful`,
+                token,
+                user: {
+                    username: admin.username,
+                    role: 'admin',
+                    department: admin.department
+                },
             });
         }
+
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid credentials',
+        });
+
     } catch (error) {
         console.error('Admin login error:', error);
         return res.status(500).json({

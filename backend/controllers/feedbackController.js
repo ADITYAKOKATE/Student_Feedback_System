@@ -118,7 +118,13 @@ export const getFeedbackReports = async (req, res) => {
         } = req.query;
 
         const matchStage = {};
-        if (department) matchStage.department = department;
+
+        // Enforce Department Access
+        if (req.user.department !== 'All') {
+            matchStage.department = req.user.department;
+        } else if (department) {
+            matchStage.department = department;
+        }
         if (className) matchStage.class = className;
         if (division) matchStage.division = division;
 
@@ -232,7 +238,13 @@ export const getFeedbackSummary = async (req, res) => {
         } = req.query;
 
         const matchStage = {};
-        if (department) matchStage.department = department;
+
+        // Enforce Department Access
+        if (req.user.department !== 'All') {
+            matchStage.department = req.user.department;
+        } else if (department) {
+            matchStage.department = department;
+        }
         if (className) matchStage.class = className;
         if (division && division !== 'All') matchStage.division = division;
 
@@ -453,7 +465,13 @@ export const exportFeedbackData = async (req, res) => {
         } = req.query;
 
         const matchStage = {};
-        if (department) matchStage.department = department;
+
+        // Enforce Department Access
+        if (req.user.department !== 'All') {
+            matchStage.department = req.user.department;
+        } else if (department) {
+            matchStage.department = department;
+        }
         if (className) matchStage.class = className;
         if (division && division !== 'All') matchStage.division = division;
 

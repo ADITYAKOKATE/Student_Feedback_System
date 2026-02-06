@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import './FacultyRegistration.css';
 
 const FacultyRegistration = () => {
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
         facultyName: '',
-        department: 'Computer - AIML',
+        department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         subjectName: '',
         class: 'SE',
         division: 'A',
@@ -51,7 +53,7 @@ const FacultyRegistration = () => {
     const resetForm = () => {
         setFormData({
             facultyName: '',
-            department: 'Computer - AIML',
+            department: user?.department !== 'All' ? user.department : 'Computer - AIML',
             subjectName: '',
             class: 'SE',
             division: 'None',
@@ -180,7 +182,7 @@ const FacultyRegistration = () => {
 
                 data.push({
                     facultyName: cols[0]?.trim(),
-                    department: cols[1]?.trim() || 'Computer - AIML',
+                    department: cols[1]?.trim() || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
                     subjectName: cols[2]?.trim(),
                     class: cols[3]?.trim(),
                     division: division,
@@ -203,7 +205,10 @@ const FacultyRegistration = () => {
                         fetchFaculty(); // Refresh list
                     }
                 } catch (error) {
-                    setMessage({ type: 'error', text: 'Error uploading bulk data.' });
+                    setMessage({
+                        type: 'error',
+                        text: error.response?.data?.message || 'Error uploading bulk data.'
+                    });
                 } finally {
                     setLoading(false);
                     e.target.value = ''; // Reset file input
@@ -257,6 +262,7 @@ const FacultyRegistration = () => {
                                 value={formData.department}
                                 onChange={handleChange}
                                 required
+                                disabled={user?.department !== 'All'}
                             />
                         </div>
 
