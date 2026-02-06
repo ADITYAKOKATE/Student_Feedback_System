@@ -1,8 +1,12 @@
 import jwt from 'jsonwebtoken';
 import Student from '../models/Student.js';
+import Admin from '../models/Admin.js';
 
 // Generate JWT token
 const generateToken = (payload) => {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is not defined in environment variables');
+    }
     return jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRE || '7d',
     });
@@ -47,11 +51,7 @@ export const adminLogin = async (req, res) => {
         }
 
         // 2. Check Database Department Admin
-        // Import Admin model here if not imported at top, or ensure it is imported.
-        // Assuming: import Admin from '../models/Admin.js'; is needed.
-        // NOTE: I need to check imports in the file.
-
-        const admin = await import('../models/Admin.js').then(m => m.default.findOne({ username }));
+        const admin = await Admin.findOne({ username });
 
         if (admin && admin.password === password) { // ideally hash passwords, but keeping consistent with current codebase plaintext
             const token = generateToken({
