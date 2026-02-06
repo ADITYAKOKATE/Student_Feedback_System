@@ -5,9 +5,6 @@ import Student from '../models/Student.js';
 // @desc    Get overall statistics
 // @route   GET /api/reports/stats
 // @access  Private (Admin)
-// @desc    Get overall statistics
-// @route   GET /api/reports/stats
-// @access  Private (Admin)
 export const getOverallStats = async (req, res) => {
     try {
         const query = {};
@@ -21,30 +18,38 @@ export const getOverallStats = async (req, res) => {
         const totalFaculty = await Faculty.countDocuments(query);
 
         // Improved Aggregation for Map ratings:
-        const pipeline = [
+        const stats = await Feedback.aggregate([
             { $match: query },
             {
-                $project: {
-                    feedbackType: 1,
-                    ratingValues: { $objectToArray: "$ratings" }
-                }
-            },
-            {
-                $unwind: "$ratingValues"
-            },
-            {
-                $group: {
-                    _id: "$feedbackType",
-                    avgRating: { $avg: "$ratingValues.v" },
-                    count: { $sum: 1 }
+                $facet: {
+                    theoryStats: [
+                        { $unwind: "$theory" },
+                        { $addFields: { ratingValues: { $objectToArray: "$theory.ratings" } } },
+                        { $unwind: "$ratingValues" },
+                        {
+                            $group: {
+                                _id: null,
+                                avgRating: { $avg: "$ratingValues.v" }
+                            }
+                        }
+                    ],
+                    practicalStats: [
+                        { $unwind: "$practical" },
+                        { $addFields: { ratingValues: { $objectToArray: "$practical.ratings" } } },
+                        { $unwind: "$ratingValues" },
+                        {
+                            $group: {
+                                _id: null,
+                                avgRating: { $avg: "$ratingValues.v" }
+                            }
+                        }
+                    ]
                 }
             }
-        ];
+        ]);
 
-        const stats = await Feedback.aggregate(pipeline);
-
-        const theoryStats = stats.find(s => s._id === 'theory') || { avgRating: 0, count: 0 };
-        const practicalStats = stats.find(s => s._id === 'practical') || { avgRating: 0, count: 0 };
+        const theoryAvg = stats[0].theoryStats.length > 0 ? stats[0].theoryStats[0].avgRating : 0;
+        const practicalAvg = stats[0].practicalStats.length > 0 ? stats[0].practicalStats[0].avgRating : 0;
 
         res.json({
             success: true,
@@ -52,8 +57,8 @@ export const getOverallStats = async (req, res) => {
                 totalFeedback,
                 totalStudents,
                 totalFaculty,
-                theoryAvg: parseFloat(theoryStats.avgRating.toFixed(2)),
-                practicalAvg: parseFloat(practicalStats.avgRating.toFixed(2))
+                theoryAvg: parseFloat(theoryAvg.toFixed(2)),
+                practicalAvg: parseFloat(practicalAvg.toFixed(2))
             }
         });
     } catch (error) {
@@ -62,9 +67,6 @@ export const getOverallStats = async (req, res) => {
     }
 };
 
-// @desc    Get feedback count by department
-// @route   GET /api/reports/department-distribution
-// @access  Private (Admin)
 // @desc    Get feedback count by department
 // @route   GET /api/reports/department-distribution
 // @access  Private (Admin)
@@ -99,18 +101,12 @@ export const getDepartmentDistribution = async (req, res) => {
 // @desc    Get top performing faculty
 // @route   GET /api/reports/top-faculty
 // @access  Private (Admin)
-// @desc    Get top performing faculty
-// @route   GET /api/reports/top-faculty
-// @access  Private (Admin)
 export const getTopFaculty = async (req, res) => {
     try {
-        const query = { faculty: { $exists: true } };
-        // Enforce department access
+        const query = {};
+
+        // Note: We filter initial feedbacks by department if needed
         if (req.user.department !== 'All') {
-            // Note: Feedback schema has 'department' which reflects student's department usually? 
-            // Or faculty's department? Ideally we should filter by faculty's department for Top Faculty list.
-            // But if Feedback stores the department where feedback was given, we can use that.
-            // Let's assume Feedback.department is consistent with Faculty.department for that feedback context.
             query.department = req.user.department;
         }
 
@@ -118,21 +114,27 @@ export const getTopFaculty = async (req, res) => {
             { $match: query },
             {
                 $project: {
-                    faculty: 1,
-                    ratingValues: { $objectToArray: "$ratings" }
+                    allItems: {
+                        $concatArrays: [
+                            { $ifNull: ["$theory", []] },
+                            { $ifNull: ["$practical", []] }
+                        ]
+                    }
+                }
+            },
+            { $unwind: "$allItems" },
+            {
+                $addFields: {
+                    ratingValues: { $objectToArray: "$allItems.ratings" }
                 }
             },
             { $unwind: "$ratingValues" },
             {
                 $group: {
-                    _id: "$faculty",
-                    avgRating: { $avg: "$ratingValues.v" },
-                    feedbackCount: { $sum: 1 } // Note: this count is per-rating-field, need to be careful.
+                    _id: "$allItems.faculty",
+                    avgRating: { $avg: "$ratingValues.v" }
                 }
             },
-            // Re-grouping correctly: 
-            // We want average per feedback *instance* then average of those? 
-            // Or average of ALL rating values given to that faculty? Usually the latter.
             {
                 $lookup: {
                     from: "faculties",
@@ -146,9 +148,7 @@ export const getTopFaculty = async (req, res) => {
                 $project: {
                     name: "$facultyInfo.facultyName",
                     subject: "$facultyInfo.subjectName",
-                    avgRating: { $round: ["$avgRating", 2] },
-                    // feedbackCount is inflated by number of questions. 
-                    // Let's just return avgRating for now.
+                    avgRating: { $round: ["$avgRating", 2] }
                 }
             },
             { $sort: { avgRating: -1 } },

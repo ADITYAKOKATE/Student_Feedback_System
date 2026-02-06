@@ -1,0 +1,32 @@
+[dotenv@17.2.3] injecting env (7) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+MongoDB connected
+--- Sample Student ---
+ID: 69864cb7a6e37c35a51ecc0e
+Username: aditya.k
+Class: SE
+Division: A
+Department: AIML
+
+--- Checking for Department Mismatches ---
+Found 4 faculty for Class SE Div A (ignoring Department):
+- Varsha Nawale (Analysis of Algorithm) | Dept: 'AIML' | Practical: true
+- Varsha Nawale (Analysis of Algorithm) | Dept: 'Computer - AIML' | Practical: true
+- Onkar Khandvilkar (Design Thinking) | Dept: 'Computer - AIML' | Practical: false
+- Dr. Anil Sharma (Data Structures) | Dept: 'Computer - AIML' | Practical: true
+
+Number of students with 'Computer - AIML': 0
+Number of students with 'AIML': 6
+
+--- Theory Faculty Query ---
+{
+  department: 'AIML',
+  class: 'SE',
+  division: 'A',
+  isPracticalFaculty: false
+}
+Found 0 theory faculty members.
+
+ Total Faculty for this Class/Div: 1
+
+--- Sample Faculty from DB (Any) ---
+Class: SE, Div: A, Dept: Computer - AIML, Practical: true

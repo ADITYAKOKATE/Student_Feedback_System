@@ -11,12 +11,13 @@ const FacilitiesFeedbackRetrieval = () => {
     const [facilitiesFeedbacks, setFacilitiesFeedbacks] = useState([]);
 
     const [loading, setLoading] = useState(false);
-    // Removed activeTab state, we default to showing both or just "Combined"
 
     const [filters, setFilters] = useState({
         department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         class: 'SE',
         division: 'All',
+        fromDate: '',
+        toDate: '',
     });
 
     // For detail modal
@@ -168,11 +169,34 @@ const FacilitiesFeedbackRetrieval = () => {
                             {classes.map(cls => <option key={cls} value={cls}>{cls}</option>)}
                         </select>
                     </div>
+                </div>
+
+                <div className="form-row">
                     <div className="form-group">
                         <label className="form-label">Division</label>
                         <select name="division" className="form-select" value={filters.division} onChange={handleFilterChange}>
                             {divisions.map(div => <option key={div} value={div}>{div}</option>)}
                         </select>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">From</label>
+                        <input
+                            type="date"
+                            name="fromDate"
+                            className="form-input"
+                            value={filters.fromDate}
+                            onChange={handleFilterChange}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">To</label>
+                        <input
+                            type="date"
+                            name="toDate"
+                            className="form-input"
+                            value={filters.toDate}
+                            onChange={handleFilterChange}
+                        />
                     </div>
                 </div>
 
@@ -258,7 +282,7 @@ const FacilitiesFeedbackRetrieval = () => {
                     )}
 
                     {combinedFeedbacks.length === 0 && (
-                        <div className="alert alert-info">No feedback data found.</div>
+                        <div className="alert alert-info">No feedback data found for the selected criteria.</div>
                     )}
                 </div>
             )}
@@ -273,7 +297,7 @@ const FacilitiesFeedbackRetrieval = () => {
                         <p><strong>Department:</strong> {filters.department}</p>
                         <p><strong>Class:</strong> {filters.class}</p>
                         <p><strong>Division:</strong> {filters.division}</p>
-                        <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+                        <p><strong>Date:</strong> {filters.fromDate ? `${filters.fromDate} to ${filters.toDate || 'Present'}` : new Date().toLocaleDateString()}</p>
                     </div>
                     <hr />
 

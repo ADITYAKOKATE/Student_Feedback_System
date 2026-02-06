@@ -76,7 +76,7 @@ studentSchema.methods.comparePassword = async function (enteredPassword) {
 // Create compound index for efficient queries
 studentSchema.index({ class: 1, division: 1, department: 1 });
 // Create compound index for efficient queries
-studentSchema.index({ class: 1, division: 1, department: 1 });
+// Duplicate index removed
 // studentSchema.index({ grNo: 1 }); // Already indexed by schema definition if unique: true was kept, but we removed unique: true just now? 
 // Wait, better to keep unique: true in schema and remove this one. Or vice versa.
 // The error said "Duplicate schema index... using both index: true and schema.index()".

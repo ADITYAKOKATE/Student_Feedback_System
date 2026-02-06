@@ -162,7 +162,6 @@ const FacultyRegistration = () => {
 
             // Assume first line is header, so start from index 1. 
             // Expected Header: Faculty Name,Department,Subject,Class,Division
-
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -218,6 +217,24 @@ const FacultyRegistration = () => {
         reader.readAsText(file);
     };
 
+    const downloadSampleCSV = () => {
+        const headers = ["Faculty Name", "Department", "Subject", "Class", "Division", "Is Elective", "Is Practical"];
+        // Example Row
+        const sampleData = ["John Doe,Computer,Data Structures,SE,A,No,No"];
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + sampleData.join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "faculty_upload_template.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     // Filter faculty by division for display
     const getFacultyByDivision = (div) => {
         return facultyList.filter(f => f.division === div);
@@ -234,7 +251,16 @@ const FacultyRegistration = () => {
             {/* Bulk Upload Section */}
             {!editingId && (
                 <div className="bulk-upload-section" style={{ marginBottom: '20px', padding: '15px', border: '1px dashed #ccc', borderRadius: '8px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
-                    <h4 style={{ margin: '0 0 10px 0' }}>Bulk Upload via CSV</h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: '0' }}>Bulk Upload via CSV</h4>
+                        <button
+                            onClick={downloadSampleCSV}
+                            className="btn btn-sm btn-outline-primary"
+                            style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                        >
+                            Download Template
+                        </button>
+                    </div>
                     <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
                         Format: Faculty Name, Department, Subject, Class, Division, Is Elective (Yes/No), Is Practical (Yes/No)
                     </p>
