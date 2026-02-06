@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -11,11 +11,29 @@ import FacilitiesFeedbackRetrieval from './pages/admin/FacilitiesFeedbackRetriev
 import StudentLogin from './pages/student/StudentLogin';
 import FeedbackWizard from './pages/student/FeedbackWizard';
 import Reports from './pages/admin/Reports';
+import { useEffect } from 'react';
+
+const TitleUpdater = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      document.title = 'Admin Portal';
+    } else if (location.pathname.startsWith('/student')) {
+      document.title = 'Student Feedback Form';
+    } else {
+      document.title = 'Student Feedback System';
+    }
+  }, [location]);
+
+  return null;
+};
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <TitleUpdater />
         <Routes>
           {/* Redirect root to admin login */}
           <Route path="/" element={<Navigate to="/admin/login" replace />} />
