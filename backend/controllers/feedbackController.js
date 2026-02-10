@@ -257,17 +257,20 @@ export const getFeedbackSummary = async (req, res) => {
         const feedbacks = await Feedback.find(matchStage)
             .populate('theory.faculty', 'facultyName subjectName')
             .populate('practical.faculty', 'facultyName subjectName')
+            .populate('student', 'practicalBatch') // Populate student practicalBatch
             .lean();
 
         const summaryMap = new Map();
 
         // Helper to process a feedback item
-        const processItem = (key, name, subject, ratings) => {
+        const processItem = (key, name, subject, division, ratings, batch = '-') => {
             if (!summaryMap.has(key)) {
                 summaryMap.set(key, {
-                    facultyId: key,
+                    facultyId: key.split('_')[0], // Original ID
                     facultyName: name,
                     subjectName: subject,
+                    division: division, // Store division
+                    batch: batch, // Store batch
                     totalFeedbacks: 0,
                     totalScoreSum: 0,
                     questionScores: {},
@@ -299,9 +302,10 @@ export const getFeedbackSummary = async (req, res) => {
                 fb.theory.forEach(item => {
                     if (item.faculty) {
                         processItem(
-                            item.faculty._id.toString(),
+                            item.faculty._id.toString() + '_' + fb.division, // Unique key per faculty per division
                             item.faculty.facultyName,
                             item.faculty.subjectName,
+                            fb.division, // Pass division
                             item.ratings
                         );
                     }
@@ -312,11 +316,14 @@ export const getFeedbackSummary = async (req, res) => {
             if (!feedbackType || feedbackType === 'practical') {
                 fb.practical.forEach(item => {
                     if (item.faculty) {
+                        const batch = fb.student?.practicalBatch || '-';
                         processItem(
-                            item.faculty._id.toString(),
+                            item.faculty._id.toString() + '_' + fb.division + '_' + batch, // Include batch in key
                             item.faculty.facultyName,
                             item.faculty.subjectName,
-                            item.ratings
+                            fb.division,
+                            item.ratings,
+                            batch
                         );
                     }
                 });
@@ -325,14 +332,14 @@ export const getFeedbackSummary = async (req, res) => {
             // Library
             if (!feedbackType || feedbackType === 'library') {
                 if (fb.library && fb.library.ratings && Object.keys(fb.library.ratings).length > 0) {
-                    processItem('library', 'Library', 'General', fb.library.ratings);
+                    processItem('library_' + fb.division, 'Library', 'General', fb.division, fb.library.ratings);
                 }
             }
 
             // Facilities
             if (!feedbackType || feedbackType === 'other_facilities') {
                 if (fb.facilities && fb.facilities.ratings && Object.keys(fb.facilities.ratings).length > 0) {
-                    processItem('other_facilities', 'Other Facilities', 'General', fb.facilities.ratings);
+                    processItem('other_facilities_' + fb.division, 'Other Facilities', 'General', fb.division, fb.facilities.ratings);
                 }
             }
         });
@@ -575,6 +582,10 @@ export const getFeedbackFormData = async (req, res) => {
             class: student.class,
             division: student.division,
             isPracticalFaculty: false,
+            $or: [
+                { isElective: false }, // Core subjects
+                { isElective: true, subjectName: student.electiveChosen } // Elective matching student's choice
+            ]
         }).select('facultyName subjectName _id');
 
         const practicalFaculty = await Faculty.find({

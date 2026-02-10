@@ -6,9 +6,13 @@ const studentSchema = new mongoose.Schema(
         grNo: {
             type: String,
             required: [true, 'GR Number is required'],
-            // unique: true, // Taken care of by compound index or separate declaration if needed
             trim: true,
             uppercase: true,
+        },
+        rollNo: {
+            type: String,
+            required: [true, 'Roll Number is required'],
+            trim: true,
         },
         username: {
             type: String,

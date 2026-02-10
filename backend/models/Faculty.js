@@ -37,6 +37,10 @@ const facultySchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        practicalBatches: {
+            type: [String],
+            default: [], // e.g., ["A", "B", "C"]
+        },
     },
     {
         timestamps: true,

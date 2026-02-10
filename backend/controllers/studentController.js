@@ -7,6 +7,7 @@ export const registerStudent = async (req, res) => {
     try {
         const {
             grNo,
+            rollNo,
             username,
             password,
             department,
@@ -20,6 +21,7 @@ export const registerStudent = async (req, res) => {
         // Validate required fields
         if (
             !grNo ||
+            !rollNo ||
             !username ||
             !password ||
             !department ||
@@ -56,6 +58,7 @@ export const registerStudent = async (req, res) => {
         // Create student
         const student = await Student.create({
             grNo: grNo.toUpperCase(),
+            rollNo,
             username,
             password,
             department,
@@ -115,10 +118,10 @@ export const bulkRegisterStudents = async (req, res) => {
 
         // Validate required fields to prevent 500 errors
         for (const student of students) {
-            if (!student.grNo || !student.username || !student.department) {
+            if (!student.grNo || !student.rollNo || !student.username || !student.department) {
                 return res.status(400).json({
                     success: false,
-                    message: `Invalid data: GR No, Username, and Department are required for all students. Missing in record: ${JSON.stringify(student)}`,
+                    message: `Invalid data: GR No, Roll No, Username, and Department are required for all students. Missing in record: ${JSON.stringify(student)}`,
                 });
             }
         }

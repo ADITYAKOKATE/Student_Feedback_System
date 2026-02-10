@@ -3,6 +3,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import './FeedbackRetrieval.css';
 import { feedbackQuestions } from '../../utils/feedbackQuestions';
+import collegeHeader from '../../assets/college_header.jpg'; // Import header image
 
 const TheoryFeedbackRetrieval = () => {
     const { user } = useAuth();
@@ -270,44 +271,75 @@ const TheoryFeedbackRetrieval = () => {
 
             {feedbacks.length > 0 && (
                 <div className="feedback-results">
-                    <h3>Feedback Summary ({feedbacks.length} Teachers)</h3>
-                    <div className="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Faculty Name</th>
-                                    <th>Subject</th>
-                                    <th>Total Feedbacks</th>
-                                    <th>Average Rating</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {feedbacks.map((item) => (
-                                    <tr key={item.facultyId}>
-                                        <td>{item.facultyName}</td>
-                                        <td>{item.subjectName}</td>
-                                        <td>
-                                            <span className="badge badge-info">{item.totalFeedbacks}</span>
-                                        </td>
-                                        <td>
-                                            <span className={`rating-badge ${item.averageRating >= 4 ? 'good' : item.averageRating >= 3 ? 'average' : 'poor'}`}>
-                                                {item.averageRating} / 5
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button
-                                                className="btn btn-sm btn-outline-info"
-                                                onClick={() => fetchDetailedReports(item.facultyId)}
-                                            >
-                                                View Details
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    {/* Helper to render a table for a specific list of items */}
+                    {(() => {
+                        // Group feedbacks by division
+                        const groupedFeedbacks = feedbacks.reduce((acc, item) => {
+                            const div = item.division || 'Unknown';
+                            if (!acc[div]) acc[div] = [];
+                            acc[div].push(item);
+                            return acc;
+                        }, {});
+
+                        // Sort divisions (e.g., A, B, C...)
+                        const sortedDivisions = Object.keys(groupedFeedbacks).sort();
+
+                        return sortedDivisions.map((div) => (
+                            <div key={div} className="division-section" style={{ marginBottom: '40px' }}>
+                                <h3 className="division-header" style={{
+                                    textAlign: 'center',
+                                    background: '#f0f0f0',
+                                    padding: '10px',
+                                    border: '1px solid #ddd',
+                                    borderBottom: 'none'
+                                }}>
+                                    Division {div}
+                                </h3>
+                                <div className="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Faculty Name</th>
+                                                <th>Subject</th>
+                                                <th>Total Feedbacks</th>
+                                                <th>Average Rating</th>
+                                                <th className="no-print">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {groupedFeedbacks[div].map((item) => (
+                                                <tr key={item.facultyId + '_' + item.division}>
+                                                    <td>{item.facultyName}</td>
+                                                    <td>{item.subjectName}</td>
+                                                    <td>
+                                                        <span className="badge badge-info">{item.totalFeedbacks}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`rating-badge ${item.averageRating >= 4 ? 'good' : item.averageRating >= 3 ? 'average' : 'poor'}`}>
+                                                            {item.averageRating} / 5
+                                                        </span>
+                                                    </td>
+                                                    <td className="no-print">
+                                                        <button
+                                                            className="btn btn-sm btn-outline-info"
+                                                            onClick={() => fetchDetailedReports(item.facultyId)} // Note: this might need adjustment if detail view depends on division context, but existing API takes facultyId. 
+                                                        // Ideally we should pass division to fetchDetailedReports too if we want to filter details by division, 
+                                                        // but the current task is high-level report. 
+                                                        // For now, keeping facultyId lookup as is (it might show all divisions for that faculty unless we filter).
+                                                        // Let's assume detail view needs to be division-aware too? 
+                                                        // The user request is about the "Page kind of way provided in image", which is the summary report.
+                                                        >
+                                                            View Details
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ));
+                    })()}
                 </div>
             )}
 
@@ -377,52 +409,124 @@ const TheoryFeedbackRetrieval = () => {
             {/* Print Friendly Report */}
             {feedbacks.length > 0 && (
                 <div className="print-report">
-                    <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Feedback Summary Report</h2>
-                    <p style={{ textAlign: 'center' }}>
-                        <strong>Department:</strong> {filters.department} |
-                        <strong> Class:</strong> {filters.class} |
-                        <strong> Division:</strong> {filters.division}
-                    </p>
-                    <hr />
+                    {filters.division === 'All' ? (
+                        /* Summary View for 'All' Divisions */
+                        <>
+                            <div className="print-header" style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                <img src={collegeHeader} alt="College Header" style={{ width: '100%', maxWidth: '450px', height: 'auto', display: 'block', margin: '0 auto 10px auto' }} />
 
-                    {feedbacks.map((item, index) => (
-                        <div key={index} className="report-card">
-                            <div className="report-header">
-                                <div>
-                                    <h3>{item.facultyName}</h3>
-                                    <p>Subject: {item.subjectName}</p>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <h4>Overall Rating: {item.averageRating} / 5</h4>
-                                    <p>Total Feedbacks: {item.totalFeedbacks}</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '5px' }}>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <div><strong>Department :</strong> {filters.department}</div>
+                                        <div style={{ marginTop: '5px' }}><strong>Academic Year :</strong> {new Date().getFullYear()}-{new Date().getFullYear() + 1}</div>
+                                        <div style={{ marginTop: '5px' }}><strong>Report :</strong> Theory Feedback</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div>{new Date().toLocaleString()}</div>
+                                        <div style={{ marginTop: '25px', fontWeight: 'bold' }}>Theory Feedback</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <h4>Question-wise Analysis</h4>
-                            <table className="report-table">
-                                <thead>
-                                    <tr>
-                                        <th>Q. No</th>
-                                        <th>Question</th>
-                                        <th>Average Rating</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {feedbackQuestions.theory.map((question, qIdx) => {
-                                        const key = `q${qIdx + 1}`;
-                                        const rating = item.questionAverageRatings ? item.questionAverageRatings[key] : 'N/A';
-                                        return (
-                                            <tr key={key}>
-                                                <td style={{ width: '50px' }}>Q{qIdx + 1}</td>
-                                                <td>{question}</td>
-                                                <td style={{ width: '100px', fontWeight: 'bold' }}>{rating}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    ))}
+                            {(() => {
+                                const groupedFeedbacks = feedbacks.reduce((acc, item) => {
+                                    const div = item.division || 'Unknown';
+                                    if (!acc[div]) acc[div] = [];
+                                    acc[div].push(item);
+                                    return acc;
+                                }, {});
+
+                                const sortedDivisions = Object.keys(groupedFeedbacks).sort();
+
+                                return sortedDivisions.map((div) => (
+                                    <div key={div} className="print-division-section" style={{ breakInside: 'avoid', pageBreakInside: 'avoid', marginBottom: '30px' }}>
+                                        <h2 style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: '10px' }}>
+                                            {filters.class} {div}
+                                        </h2>
+                                        <table className="report-table" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '0.8rem', tableLayout: 'fixed' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: '#f2f2f2' }}>
+                                                    <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'left', width: '30%' }}>Name</th>
+                                                    <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'left', width: '30%' }}>Subject</th>
+                                                    <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'center', width: '20%' }}>Number of Students</th>
+                                                    <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'center', width: '20%' }}>Average</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {groupedFeedbacks[div].map((item, idx) => (
+                                                    <tr key={idx}>
+                                                        <td style={{ border: '1px solid #000', padding: '5px' }}>{item.facultyName}</td>
+                                                        <td style={{ border: '1px solid #000', padding: '5px' }}>{item.subjectName}</td>
+                                                        <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>{item.totalFeedbacks}</td>
+                                                        <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>{item.averageRating}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ));
+                            })()}
+
+                            <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', padding: '0 20px', breakInside: 'avoid' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <p>Academic Coordinator</p>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <p>H.O.D.</p>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        feedbacks.map((item, index) => (
+                            <div key={index} className="detailed-report-page" style={{ pageBreakAfter: 'always', padding: '20px' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                                    <img src={collegeHeader} alt="College Header" style={{ width: '100%', maxWidth: '600px', height: 'auto', display: 'block', margin: '0 auto' }} />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '0.9rem', paddingBottom: '10px' }}>
+                                    <div><strong>Department :</strong> {filters.department}</div>
+                                    <div>{new Date().toLocaleDateString()}</div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                    The average feedback for {item.subjectName} taught by {item.facultyName} given by {item.totalFeedbacks} students is
+                                    <div style={{ fontSize: '1.4rem', marginTop: '10px' }}>{item.averageRating}</div>
+                                </div>
+
+                                <table className="report-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f0f0f0' }}>
+                                            <th style={{ border: '1px solid #000', padding: '8px', width: '50px', textAlign: 'center' }}>Sr</th>
+                                            <th style={{ border: '1px solid #000', padding: '8px' }}>Details</th>
+                                            <th style={{ border: '1px solid #000', padding: '8px', width: '150px', textAlign: 'center' }}>Average Feedback</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {feedbackQuestions.theory.map((question, qIdx) => {
+                                            const key = `q${qIdx + 1}`;
+                                            const rating = item.questionAverageRatings ? item.questionAverageRatings[key] : 'N/A';
+                                            return (
+                                                <tr key={key}>
+                                                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{qIdx + 1}</td>
+                                                    <td style={{ border: '1px solid #000', padding: '8px' }}>{question}</td>
+                                                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>{rating}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+
+                                <div style={{ marginTop: '100px', display: 'flex', justifyContent: 'space-between', padding: '0 20px' }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <p>Academic Coordinator</p>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <p>H.O.D.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             )}
         </div>

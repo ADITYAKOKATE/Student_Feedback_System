@@ -8,6 +8,7 @@ const StudentRegistration = () => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
         grNo: '',
+        rollNo: '',
         username: '',
         password: '',
         department: user?.department !== 'All' ? user.department : 'Computer - AIML',
@@ -98,6 +99,7 @@ const StudentRegistration = () => {
     const resetForm = () => {
         setFormData({
             grNo: '',
+            rollNo: '',
             username: '',
             password: '',
             department: user?.department !== 'All' ? user.department : 'Computer - AIML',
@@ -114,6 +116,7 @@ const StudentRegistration = () => {
     const handleEdit = (student) => {
         setFormData({
             grNo: student.grNo,
+            rollNo: student.rollNo || '',
             username: student.username,
             password: '', // Don't populate password
             department: student.department || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
@@ -266,24 +269,25 @@ const StudentRegistration = () => {
             const lines = text.split('\n');
             const data = [];
 
-            // Expected Header: GR No,Username,Password,Department,Class,Division,Batch
+            // Expected Header: GR No,Roll No,Username,Password,Department,Class,Division,Batch
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
 
                 const cols = line.split(',');
-                if (cols.length < 7) continue;
+                if (cols.length < 8) continue;
 
                 data.push({
                     grNo: cols[0]?.trim(),
-                    username: cols[1]?.trim(),
-                    password: cols[2]?.trim(),
-                    department: cols[3]?.trim() || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
-                    class: cols[4]?.trim(),
-                    division: cols[5]?.trim(),
-                    practicalBatch: cols[6]?.trim(),
-                    eligibility: cols[7]?.trim().toLowerCase() === 'no' || cols[7]?.trim().toLowerCase() === 'false' ? false : true,
-                    electiveChosen: cols[8]?.trim() || ''
+                    rollNo: cols[1]?.trim(),
+                    username: cols[2]?.trim(),
+                    password: cols[3]?.trim(),
+                    department: cols[4]?.trim() || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
+                    class: cols[5]?.trim(),
+                    division: cols[6]?.trim(),
+                    practicalBatch: cols[7]?.trim(),
+                    eligibility: cols[8]?.trim().toLowerCase() === 'no' || cols[8]?.trim().toLowerCase() === 'false' ? false : true,
+                    electiveChosen: cols[9]?.trim() || ''
                 });
             }
 
@@ -330,6 +334,7 @@ const StudentRegistration = () => {
 
             const matchesSearch =
                 (student.grNo && student.grNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (student.rollNo && student.rollNo.toString().includes(searchQuery)) ||
                 (student.username && student.username.toLowerCase().includes(searchQuery.toLowerCase()));
 
             return matchesDivision && matchesBatch && matchesSearch && matchesEligibility && matchesFeedback;
@@ -339,6 +344,10 @@ const StudentRegistration = () => {
         filteredStudents.sort((a, b) => {
             if (a.division < b.division) return -1;
             if (a.division > b.division) return 1;
+            // Then Sort by Roll No if available, else Gr No
+            if (a.rollNo && b.rollNo) {
+                return a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true });
+            }
             return a.grNo.localeCompare(b.grNo);
         });
 
@@ -357,6 +366,7 @@ const StudentRegistration = () => {
                             />
                         </th>
                         <th>Gr No.</th>
+                        <th>Roll No.</th>
                         <th>Username</th>
                         <th>Div</th>
                         <th>Batch</th>
@@ -387,6 +397,7 @@ const StudentRegistration = () => {
                                     />
                                 </td>
                                 <td data-label="Gr No.">{student.grNo}</td>
+                                <td data-label="Roll No.">{student.rollNo}</td>
                                 <td data-label="Username">{student.username}</td>
                                 <td data-label="Div">{student.division}</td>
                                 <td data-label="Batch">{student.practicalBatch}</td>
@@ -418,8 +429,8 @@ const StudentRegistration = () => {
     };
 
     const downloadSampleCSV = () => {
-        const headers = ["GR No", "Username", "Password", "Department", "Class", "Division", "Batch", "Eligibility", "Elective Selected"];
-        const sampleData = ["SE2025001,john_doe,password123,Computer,SE,A,B,Yes,Cloud Computing"];
+        const headers = ["GR No", "Roll No", "Username", "Password", "Department", "Class", "Division", "Batch", "Eligibility", "Elective Selected"];
+        const sampleData = ["SE2025001,23101,john_doe,password123,Computer,SE,A,B,Yes,Cloud Computing"];
 
         const csvContent = "data:text/csv;charset=utf-8,"
             + headers.join(",") + "\n"
@@ -480,7 +491,7 @@ const StudentRegistration = () => {
                         </button>
                     </div>
                     <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
-                        Format: GR No, Username, Password, Department, Class, Division, Practical Batch, Eligibility, Elective Selected
+                        Format: GR No, Roll No, Username, Password, Department, Class, Division, Practical Batch, Eligibility, Elective Selected
                     </p>
                     <input
                         type="file"
@@ -499,15 +510,21 @@ const StudentRegistration = () => {
                             <input type="text" id="grNo" name="grNo" className="form-input" placeholder="Gr No." value={formData.grNo} onChange={handleChange} required />
                         </div>
                         <div className="form-group">
-                            <label htmlFor="username" className="form-label">Username</label>
-                            <input type="text" id="username" name="username" className="form-input" placeholder="Username" value={formData.username} onChange={handleChange} required />
+                            <label htmlFor="rollNo" className="form-label">Roll No</label>
+                            <input type="text" id="rollNo" name="rollNo" className="form-input" placeholder="Roll No" value={formData.rollNo} onChange={handleChange} required />
                         </div>
                     </div>
                     <div className="form-row">
                         <div className="form-group">
+                            <label htmlFor="username" className="form-label">Username</label>
+                            <input type="text" id="username" name="username" className="form-input" placeholder="Username" value={formData.username} onChange={handleChange} required />
+                        </div>
+                        <div className="form-group">
                             <label htmlFor="password" className="form-label">Password</label>
                             <input type="password" id="password" name="password" className="form-input" placeholder="Password" value={formData.password} onChange={handleChange} required={!editingId} />
                         </div>
+                    </div>
+                    <div className="form-row">
                         <div className="form-group">
                             <label htmlFor="department" className="form-label">Department</label>
                             <input

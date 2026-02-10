@@ -14,6 +14,7 @@ export const registerFaculty = async (req, res) => {
             division,
             isElective,
             isPracticalFaculty,
+            practicalBatches,
         } = req.body;
 
         // Validate required fields
@@ -41,6 +42,7 @@ export const registerFaculty = async (req, res) => {
             division,
             isElective: isElective || false,
             isPracticalFaculty: isPracticalFaculty || false,
+            practicalBatches: (isPracticalFaculty && practicalBatches) ? practicalBatches : [],
         });
 
         return res.status(201).json({
@@ -131,6 +133,10 @@ export const updateFaculty = async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
+
+        if (updateData.isPracticalFaculty === false) {
+            updateData.practicalBatches = [];
+        }
 
         const faculty = await Faculty.findByIdAndUpdate(id, updateData, {
             new: true,

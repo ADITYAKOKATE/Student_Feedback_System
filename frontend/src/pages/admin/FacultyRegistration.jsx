@@ -13,6 +13,7 @@ const FacultyRegistration = () => {
         division: 'A',
         isElective: false,
         isPracticalFaculty: false,
+        practicalBatches: [],
     });
 
     const [activeTab, setActiveTab] = useState('SE');
@@ -59,6 +60,7 @@ const FacultyRegistration = () => {
             division: 'None',
             isElective: false,
             isPracticalFaculty: false,
+            practicalBatches: [],
         });
         setEditingId(null);
         setMessage({ type: '', text: '' });
@@ -73,6 +75,7 @@ const FacultyRegistration = () => {
             division: faculty.division,
             isElective: faculty.isElective,
             isPracticalFaculty: faculty.isPracticalFaculty,
+            practicalBatches: faculty.practicalBatches || [],
         });
         setEditingId(faculty._id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -84,6 +87,17 @@ const FacultyRegistration = () => {
         setFormData({
             ...formData,
             [name]: type === 'checkbox' ? checked : value,
+        });
+    };
+
+    const handleBatchChange = (batch) => {
+        setFormData(prev => {
+            const currentBatches = prev.practicalBatches || [];
+            if (currentBatches.includes(batch)) {
+                return { ...prev, practicalBatches: currentBatches.filter(b => b !== batch) };
+            } else {
+                return { ...prev, practicalBatches: [...currentBatches, batch].sort() };
+            }
         });
     };
 
@@ -149,91 +163,7 @@ const FacultyRegistration = () => {
         }
     };
 
-    // CSV Upload Handler
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-            const text = evt.target.result;
-            const lines = text.split('\n');
-            const data = [];
-
-            // Assume first line is header, so start from index 1. 
-            // Expected Header: Faculty Name,Department,Subject,Class,Division
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-
-                const cols = line.split(',');
-                if (cols.length < 5) continue; // Skip invalid lines
-
-                // Handle Division: Map 'None' or empty to 'None', 'A'->'A', etc.
-                const divRaw = cols[4]?.trim();
-                const division = (!divRaw || divRaw.toLowerCase() === 'none') ? 'None' : divRaw;
-
-                // Handle Booleans (Yes/True -> true, otherwise false)
-                const isElectiveRaw = cols[5]?.trim().toLowerCase();
-                const isPracticalRaw = cols[6]?.trim().toLowerCase();
-                const isElective = (isElectiveRaw === 'yes' || isElectiveRaw === 'true');
-                const isPractical = (isPracticalRaw === 'yes' || isPracticalRaw === 'true');
-
-                data.push({
-                    facultyName: cols[0]?.trim(),
-                    department: cols[1]?.trim() || (user?.department !== 'All' ? user.department : 'Computer - AIML'),
-                    subjectName: cols[2]?.trim(),
-                    class: cols[3]?.trim(),
-                    division: division,
-                    isElective: isElective,
-                    isPracticalFaculty: isPractical
-                });
-            }
-
-            if (data.length === 0) {
-                setMessage({ type: 'error', text: 'No valid data found in CSV.' });
-                return;
-            }
-
-            if (window.confirm(`Found ${data.length} faculty entries. Upload now?`)) {
-                setLoading(true);
-                try {
-                    const response = await api.post('/faculty/bulk-register', data);
-                    if (response.data.success) {
-                        setMessage({ type: 'success', text: `Successfully registered ${response.data.count} faculty!` });
-                        fetchFaculty(); // Refresh list
-                    }
-                } catch (error) {
-                    setMessage({
-                        type: 'error',
-                        text: error.response?.data?.message || 'Error uploading bulk data.'
-                    });
-                } finally {
-                    setLoading(false);
-                    e.target.value = ''; // Reset file input
-                }
-            }
-        };
-        reader.readAsText(file);
-    };
-
-    const downloadSampleCSV = () => {
-        const headers = ["Faculty Name", "Department", "Subject", "Class", "Division", "Is Elective", "Is Practical"];
-        // Example Row
-        const sampleData = ["John Doe,Computer,Data Structures,SE,A,No,No"];
-
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + headers.join(",") + "\n"
-            + sampleData.join("\n");
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "faculty_upload_template.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
 
     // Filter faculty by division for display
     const getFacultyByDivision = (div) => {
@@ -248,30 +178,7 @@ const FacultyRegistration = () => {
                 <div className={`alert alert-${message.type}`}>{message.text}</div>
             )}
 
-            {/* Bulk Upload Section */}
-            {!editingId && (
-                <div className="bulk-upload-section" style={{ marginBottom: '20px', padding: '15px', border: '1px dashed #ccc', borderRadius: '8px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <h4 style={{ margin: '0' }}>Bulk Upload via CSV</h4>
-                        <button
-                            onClick={downloadSampleCSV}
-                            className="btn btn-sm btn-outline-primary"
-                            style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                        >
-                            Download Template
-                        </button>
-                    </div>
-                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
-                        Format: Faculty Name, Department, Subject, Class, Division, Is Elective (Yes/No), Is Practical (Yes/No)
-                    </p>
-                    <input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                        style={{ display: 'inline-block' }}
-                    />
-                </div>
-            )}
+
 
             <div className="card">
                 <form onSubmit={handleSubmit}>
@@ -408,6 +315,24 @@ const FacultyRegistration = () => {
                         </div>
                     </div>
 
+                    {formData.isPracticalFaculty && (
+                        <div className="form-group" style={{ marginTop: '15px' }}>
+                            <label className="form-label">Practical Batches</label>
+                            <div className="checkbox-group" style={{ display: 'flex', gap: '15px' }}>
+                                {['A', 'B', 'C'].map(batch => (
+                                    <label key={batch} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.practicalBatches?.includes(batch)}
+                                            onChange={() => handleBatchChange(batch)}
+                                        />
+                                        Batch {batch}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="form-actions">
                         <button
                             type="button"
@@ -487,6 +412,7 @@ const FacultyRegistration = () => {
                                         <th>Subject</th>
                                         <th>Division</th>
                                         <th>Practical</th>
+                                        <th>Batch</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -508,7 +434,7 @@ const FacultyRegistration = () => {
                                         })
                                         .length === 0 ? (
                                         <tr>
-                                            <td colSpan="5" className="text-center">
+                                            <td colSpan="6" className="text-center">
                                                 No faculty found matching your criteria.
                                             </td>
                                         </tr>
@@ -527,27 +453,42 @@ const FacultyRegistration = () => {
                                                 if (a.division > b.division) return 1;
                                                 return a.facultyName.localeCompare(b.facultyName);
                                             })
-                                            .map((faculty) => (
-                                                <tr key={faculty._id}>
-                                                    <td>{faculty.facultyName}</td>
-                                                    <td>{faculty.subjectName}</td>
+                                            .flatMap((faculty) => {
+                                                if (faculty.isPracticalFaculty && faculty.practicalBatches && faculty.practicalBatches.length > 0) {
+                                                    return faculty.practicalBatches.map((batch, index) => ({
+                                                        ...faculty,
+                                                        displayBatch: batch,
+                                                        uniqueKey: `${faculty._id}-${batch}`
+                                                    }));
+                                                }
+                                                return [{
+                                                    ...faculty,
+                                                    displayBatch: '-',
+                                                    uniqueKey: faculty._id
+                                                }];
+                                            })
+                                            .map((row) => (
+                                                <tr key={row.uniqueKey}>
+                                                    <td>{row.facultyName}</td>
+                                                    <td>{row.subjectName}</td>
                                                     <td>
-                                                        <span className={`badge badge-${faculty.division === 'None' ? 'secondary' : 'primary'}`}>
-                                                            {faculty.division}
+                                                        <span className={`badge badge-${row.division === 'None' ? 'secondary' : 'primary'}`}>
+                                                            {row.division}
                                                         </span>
                                                     </td>
-                                                    <td>{faculty.isPracticalFaculty ? 'Yes' : 'No'}</td>
+                                                    <td>{row.isPracticalFaculty ? 'Yes' : 'No'}</td>
+                                                    <td>{row.displayBatch}</td>
                                                     <td>
                                                         <button
                                                             className="btn btn-warning btn-sm"
                                                             style={{ marginRight: '5px' }}
-                                                            onClick={() => handleEdit(faculty)}
+                                                            onClick={() => handleEdit(row)}
                                                         >
                                                             Edit
                                                         </button>
                                                         <button
                                                             className="btn btn-danger btn-sm"
-                                                            onClick={() => handleDelete(faculty._id)}
+                                                            onClick={() => handleDelete(row._id)}
                                                         >
                                                             Delete
                                                         </button>
