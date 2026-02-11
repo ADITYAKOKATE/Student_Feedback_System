@@ -49,7 +49,7 @@ const StudentRegistration = () => {
         if (formData.class) {
             fetchElectives();
         }
-    }, [formData.class, formData.department]);
+    }, [formData.class, formData.department, formData.division]);
 
     const fetchElectives = async () => {
         setFetchingElectives(true);
@@ -57,6 +57,7 @@ const StudentRegistration = () => {
             const response = await api.get('/faculty', {
                 params: {
                     class: formData.class,
+                    division: formData.division,
                     isElective: true,
                     department: formData.department
                 }
