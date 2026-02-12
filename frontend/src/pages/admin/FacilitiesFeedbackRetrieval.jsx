@@ -3,7 +3,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import './FeedbackRetrieval.css';
 import { feedbackQuestions } from '../../utils/feedbackQuestions';
-import collegeHeader from '../../assets/college_header.jpg'; // Import header image
+import collegeHeader from "../../assets/college_header.png"; // Import header image
 
 const FacilitiesFeedbackRetrieval = () => {
     const { user } = useAuth();
@@ -151,7 +151,7 @@ const FacilitiesFeedbackRetrieval = () => {
                         return (
                             <tr key={key}>
                                 <td style={{ width: '50px' }}>Q{qIdx + 1}</td>
-                                <td>{question}</td>
+                                <td style={{ fontSize: '1.1rem' }}>{question}</td>
                                 <td style={{ width: '100px', fontWeight: 'bold' }}>{rating}</td>
                             </tr>
                         );
@@ -161,12 +161,70 @@ const FacilitiesFeedbackRetrieval = () => {
         )
     };
 
-    const combinedFeedbacks = [...libraryFeedbacks, ...facilitiesFeedbacks].filter(item => {
-        if (filters.feedbackCategory === 'All') return true;
-        if (filters.feedbackCategory === 'Library') return item.facultyName === 'Library';
-        if (filters.feedbackCategory === 'Other Facilities') return item.facultyName === 'Other Facilities';
-        return true;
-    });
+    // Helper to aggregate feedbacks by facultyName (Facility Name)
+    const aggregateFeedbacks = (feedbacks) => {
+        const aggregated = {};
+
+        feedbacks.forEach(item => {
+            if (!aggregated[item.facultyName]) {
+                // Initialize with a copy, converting ratings to numbers for math
+                aggregated[item.facultyName] = {
+                    ...item,
+                    questionAverageRatings: { ...item.questionAverageRatings }
+                };
+            } else {
+                const existing = aggregated[item.facultyName];
+                const totalA = parseInt(existing.totalFeedbacks || 0);
+                const totalB = parseInt(item.totalFeedbacks || 0);
+                const newTotal = totalA + totalB;
+
+                if (newTotal > 0) {
+                    // Update overall average rating (Weighted Average)
+                    const avgA = parseFloat(existing.averageRating || 0);
+                    const avgB = parseFloat(item.averageRating || 0);
+                    existing.averageRating = ((avgA * totalA) + (avgB * totalB)) / newTotal;
+
+                    // Update question-wise averages
+                    Object.keys(existing.questionAverageRatings || {}).forEach(qKey => {
+                        const qAvgA = parseFloat(existing.questionAverageRatings[qKey] || 0);
+                        const qAvgB = parseFloat(item.questionAverageRatings ? item.questionAverageRatings[qKey] || 0 : 0);
+                        existing.questionAverageRatings[qKey] = ((qAvgA * totalA) + (qAvgB * totalB)) / newTotal;
+                    });
+                }
+                existing.totalFeedbacks = newTotal;
+            }
+        });
+
+        // Convert back to array and format decimals
+        return Object.values(aggregated).map(item => {
+            item.averageRating = (parseFloat(item.averageRating) || 0).toFixed(2);
+            Object.keys(item.questionAverageRatings || {}).forEach(qKey => {
+                item.questionAverageRatings[qKey] = (parseFloat(item.questionAverageRatings[qKey]) || 0).toFixed(2);
+            });
+            // Ensure the aggregated item reflects the selected division filter
+            // If we are aggregating, we are essentially creating a report for the selected scope
+            item.division = filters.division;
+            return item;
+        });
+    };
+
+    // Filter and Aggregate
+    let combinedFeedbacks = [];
+    const cleanLibrary = libraryFeedbacks.filter(i => i.facultyName === 'Library');
+    const cleanFacilities = facilitiesFeedbacks.filter(i => i.facultyName !== 'Library'); // Prevent overlap
+
+    let rawCombined = [];
+    if (filters.feedbackCategory === 'All') {
+        rawCombined = [...cleanLibrary, ...cleanFacilities];
+    } else if (filters.feedbackCategory === 'Library') {
+        rawCombined = [...cleanLibrary];
+    } else if (filters.feedbackCategory === 'Other Facilities') {
+        rawCombined = [...cleanFacilities];
+    }
+
+    // Only aggregate if we are viewing 'All' divisions, otherwise keep separate
+    // Actually for Facilities, we usually want one report regardless of division breakdown
+    combinedFeedbacks = aggregateFeedbacks(rawCombined);
 
     return (
         <div className="feedback-retrieval">
@@ -334,34 +392,43 @@ const FacilitiesFeedbackRetrieval = () => {
                 combinedFeedbacks.length > 0 && (
                     <div className="print-report">
                         {combinedFeedbacks.map((item, index) => (
-                            <div key={item.facultyId} className="print-report-page" style={{ pageBreakAfter: index < combinedFeedbacks.length - 1 ? 'always' : 'auto', padding: '20px' }}>
+                            <div key={item.facultyId || index} className="detailed-report-page" style={{
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                padding: '20px',
+                                pageBreakAfter: 'always',
+                            }}>
 
                                 {/* Header for Each Page */}
-                                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                                    <img src={collegeHeader} alt="College Header" style={{ width: '100%', maxWidth: '450px', height: 'auto', display: 'block', margin: '0 auto 10px auto' }} />
-                                    <h2 style={{ margin: '10px 0' }}>
-                                        {item.facultyName} Feedback Report
-                                    </h2>
-                                    <div className="report-header" style={{ borderBottom: '2px solid #333', paddingBottom: '10px', marginBottom: '20px' }}>
-                                        <p><strong>Department:</strong> {filters.department}</p>
-                                        <p><strong>Class:</strong> {filters.class}</p>
-                                        <p><strong>Division:</strong> {item.division || filters.division}</p>
-                                        <p><strong>Date:</strong> {filters.fromDate ? `${filters.fromDate} to ${filters.toDate || 'Present'}` : new Date().toLocaleDateString()}</p>
-                                    </div>
+                                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                                    <img src={collegeHeader} alt="College Header" style={{ width: '100%', maxWidth: '450px', height: 'auto', display: 'block', margin: '0 auto' }} />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '20px' }}>
+                                    <div><strong>Department :</strong> CSE AIML</div>
+                                    <div><strong>Division :</strong> {item.division || filters.division}</div>
                                 </div>
 
                                 {/* Content */}
-                                <div className="report-card" style={{ border: 'none', boxShadow: 'none' }}>
-                                    <h3 style={{ borderBottom: '1px solid #ddd', paddingBottom: '5px' }}>{item.facultyName} {filters.division === 'All' ? `(Div ${item.division})` : ''}</h3>
-                                    <div className="report-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }}>
-                                        <div><strong>Total Feedbacks:</strong> {item.totalFeedbacks}</div>
-                                        <div><strong>Overall Rating:</strong> {item.averageRating} / 5</div>
+                                <div className="report-card" style={{ border: 'none', boxShadow: 'none', flex: '1 1 auto' }}>
+                                    <h3 style={{ textAlign: 'center', marginBottom: '10px', fontSize: '1.2rem' }}>
+                                        {item.facultyName} Feedback Report
+                                    </h3>
+
+                                    <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '1rem' }}>
+                                        Total Feedbacks: <strong>{item.totalFeedbacks}</strong> | Overall Rating: <strong>{item.averageRating} / 5</strong>
                                     </div>
-                                    {renderQuestionTable(item, item.facultyName === 'Library' ? 'library' : 'other_facilities')}
+
+                                    {renderQuestionTable(item, (item.facultyName === 'Library' || filters.feedbackCategory === 'Library') ? 'library' : 'other_facilities')}
                                 </div>
 
                                 {/* Footer for Each Page */}
-                                <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', padding: '0 20px' }}>
+                                <div style={{
+                                    marginTop: '50px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    padding: '0 10px'
+                                }}>
                                     <div style={{ textAlign: 'center' }}>
                                         <p>Academic Coordinator</p>
                                     </div>

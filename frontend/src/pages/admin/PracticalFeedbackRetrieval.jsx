@@ -3,7 +3,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import './FeedbackRetrieval.css';
 import { feedbackQuestions } from '../../utils/feedbackQuestions';
-import collegeHeader from '../../assets/college_header.jpg'; // Import header image
+import collegeHeader from "../../assets/college_header.png"; // Import header image
 
 const PracticalFeedbackRetrieval = () => {
     const { user } = useAuth();
@@ -339,12 +339,12 @@ const PracticalFeedbackRetrieval = () => {
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '5px' }}>
                                     <div style={{ textAlign: 'left' }}>
-                                        <div><strong>Department :</strong> {filters.department}</div>
+                                        <div><strong>Department :</strong> CSE AIML</div>
                                         <div style={{ marginTop: '5px' }}><strong>Academic Year :</strong> {new Date().getFullYear()}-{new Date().getFullYear() + 1}</div>
                                         <div style={{ marginTop: '5px' }}><strong>Report :</strong> Practical Feedback</div>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <div>{new Date().toLocaleString()}</div>
+                                        {/* Date removed */}
                                         <div style={{ marginTop: '25px', fontWeight: 'bold' }}>Practical Feedback</div>
                                     </div>
                                 </div>
@@ -414,45 +414,56 @@ const PracticalFeedbackRetrieval = () => {
                     ) : (
                         /* Detailed View for Specific Division */
                         feedbacks.map((item, index) => (
-                            <div key={index} className="detailed-report-page" style={{ pageBreakAfter: 'always', padding: '20px' }}>
-                                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                                    <img src={collegeHeader} alt="College Header" style={{ width: '100%', maxWidth: '450px', height: 'auto', display: 'block', margin: '0 auto' }} />
+                            <div key={index} className="detailed-report-page" style={{
+                                height: '48vh',
+                                boxSizing: 'border-box',
+                                padding: '5px 20px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                pageBreakAfter: (index + 1) % 2 === 0 ? 'always' : 'auto',
+                                borderBottom: (index + 1) % 2 !== 0 ? '2px dashed #999' : 'none',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{ textAlign: 'center', marginBottom: '2px' }}>
+                                    <img src={collegeHeader} alt="College Header" style={{ width: '100%', maxWidth: '400px', maxHeight: '75px', height: 'auto', display: 'block', margin: '0 auto' }} />
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '0.9rem', paddingBottom: '10px' }}>
-                                    <div><strong>Department :</strong> {filters.department}</div>
-                                    <div>{new Date().toLocaleDateString()}</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '5px' }}>
+                                    <div><strong>Department :</strong> CSE AIML</div>
+                                    <div><strong>Division :</strong> {filters.division}</div>
                                 </div>
 
-                                <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                    The average feedback for {item.subjectName} {item.batch && item.batch !== '-' ? `(Batch ${item.batch})` : ''} taught by {item.facultyName} given by {item.totalFeedbacks} students is
-                                    <div style={{ fontSize: '2.5rem', marginTop: '15px', fontWeight: 'bold' }}>{item.averageRating}</div>
+                                <div style={{ textAlign: 'center', margin: '5px 0', fontSize: '0.9rem', flex: '0 0 auto' }}>
+                                    The average feedback for <strong>{item.subjectName}</strong> {item.batch && item.batch !== '-' ? `(Batch ${item.batch})` : ''} taught by <strong>{item.facultyName}</strong> given by {item.totalFeedbacks} students is
+                                    <div style={{ fontSize: '1.2rem', marginTop: '2px', fontWeight: 'bold' }}>{item.averageRating}</div>
                                 </div>
 
-                                <table className="report-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-                                    <thead>
-                                        <tr style={{ background: '#f0f0f0' }}>
-                                            <th style={{ border: '1px solid #000', padding: '8px', width: '50px', textAlign: 'center' }}>Sr</th>
-                                            <th style={{ border: '1px solid #000', padding: '8px' }}>Details</th>
-                                            <th style={{ border: '1px solid #000', padding: '8px', width: '150px', textAlign: 'center' }}>Average Feedback</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {feedbackQuestions.practical.map((question, qIdx) => {
-                                            const key = `q${qIdx + 1}`;
-                                            const rating = item.questionAverageRatings ? item.questionAverageRatings[key] : 'N/A';
-                                            return (
-                                                <tr key={key}>
-                                                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{qIdx + 1}</td>
-                                                    <td style={{ border: '1px solid #000', padding: '8px' }}>{question}</td>
-                                                    <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>{rating}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                <div style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+                                    <table className="report-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f0f0f0' }}>
+                                                <th style={{ border: '1px solid #000', padding: '4px', width: '30px', textAlign: 'center' }}>Sr</th>
+                                                <th style={{ border: '1px solid #000', padding: '4px' }}>Details</th>
+                                                <th style={{ border: '1px solid #000', padding: '4px', width: '60px', textAlign: 'center' }}>Avg</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {feedbackQuestions.practical.map((question, qIdx) => {
+                                                const key = `q${qIdx + 1}`;
+                                                const rating = item.questionAverageRatings ? item.questionAverageRatings[key] : 'N/A';
+                                                return (
+                                                    <tr key={key}>
+                                                        <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{qIdx + 1}</td>
+                                                        <td style={{ border: '1px solid #000', padding: '3px', fontSize: '1.1rem' }}>{question}</td>
+                                                        <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', fontWeight: 'bold' }}>{rating}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                                <div style={{ marginTop: '100px', display: 'flex', justifyContent: 'space-between', padding: '0 20px' }}>
+                                <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', paddingLeft: '10px', paddingRight: '10px', fontSize: '0.8rem' }}>
                                     <div style={{ textAlign: 'center' }}>
                                         <p>Academic Coordinator</p>
                                     </div>
