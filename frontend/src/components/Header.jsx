@@ -10,12 +10,14 @@ const Header = () => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isFeedbackActive, setIsFeedbackActive] = useState(false);
+    const [activeRound, setActiveRound] = useState('1');
 
     useEffect(() => {
         const fetchStatus = async () => {
             try {
                 const res = await api.get('/config/feedback-status');
                 setIsFeedbackActive(res.data.isActive);
+                setActiveRound(res.data.activeRound || '1');
             } catch (error) {
                 console.error('Error fetching feedback status', error);
             }
@@ -28,16 +30,31 @@ const Header = () => {
     const handleToggleFeedback = async () => {
         try {
             const newState = !isFeedbackActive;
-            const res = await api.post('/config/toggle-feedback', { isActive: newState });
+            const res = await api.post('/config/toggle-feedback', { isActive: newState, activeRound });
             if (res.data.success) {
                 setIsFeedbackActive(newState);
-                alert(`Feedback session ${newState ? 'ACTIVATED' : 'DEACTIVATED'}`);
+                // alert(`Feedback session ${newState ? 'ACTIVATED' : 'DEACTIVATED'}`);
             }
         } catch (error) {
             console.error('Error toggling feedback', error);
             alert('Failed to update feedback status');
         }
     };
+
+    const handleRoundChange = async (e) => {
+        const newRound = e.target.value;
+        setActiveRound(newRound);
+        try {
+            // Update backend immediately
+            const res = await api.post('/config/toggle-feedback', { isActive: isFeedbackActive, activeRound: newRound });
+            if (res.data.success) {
+                // success
+            }
+        } catch (error) {
+            console.error('Error updating round', error);
+            alert('Failed to update feedback round');
+        }
+    }
 
     const handleLogout = () => {
         logout();
@@ -58,19 +75,36 @@ const Header = () => {
             <div className="container">
                 <div className="header-content">
                     <div className="header-left">
-                        <h1 className="header-title">Saraswati College of Engineering</h1>
+                        <Link to="/admin/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <h1 className="header-title">Saraswati College of Engineering</h1>
+                        </Link>
                         <button className="mobile-menu-btn" onClick={toggleMenu}>
                             {isMenuOpen ? <FaTimes /> : <FaBars />}
                         </button>
                     </div>
 
                     {/* Feedback Toggle (Admin Only) */}
-                    {/* Feedback Toggle (Admin Only) */}
                     {user && user.role === 'admin' && (
                         <div className="feedback-control-group" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <div className="feedback-toggle-container">
+                            <div className="feedback-toggle-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <select
+                                    value={activeRound}
+                                    onChange={handleRoundChange}
+                                    style={{
+                                        padding: '5px',
+                                        borderRadius: '4px',
+                                        border: '1px solid #ccc',
+                                        fontSize: '0.9rem',
+                                        background: '#fff',
+                                        color: '#333'
+                                    }}
+                                >
+                                    <option value="1">Round 1</option>
+                                    <option value="2">Round 2</option>
+                                </select>
+
                                 <span className={isFeedbackActive ? "status-active" : "status-inactive"}>
-                                    Feedback: {isFeedbackActive ? 'ON' : 'OFF'}
+                                    {isFeedbackActive ? 'ON' : 'OFF'}
                                 </span>
                                 <label className="switch">
                                     <input
@@ -130,6 +164,15 @@ const Header = () => {
                                 </Link>
                                 <Link to="/admin/facilities-feedback" className="dropdown-item" onClick={closeMenu}>
                                     Library & Facilities
+                                </Link>
+                                <Link to="/admin/department-feedback" className="dropdown-item" onClick={closeMenu}>
+                                    Department Theory
+                                </Link>
+                                <Link to="/admin/department-practical-feedback" className="dropdown-item" onClick={closeMenu}>
+                                    Department Practical
+                                </Link>
+                                <Link to="/admin/analysis-report" className="dropdown-item" onClick={closeMenu}>
+                                    Analysis Report
                                 </Link>
                             </div>
                         </div>

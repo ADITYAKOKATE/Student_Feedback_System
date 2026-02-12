@@ -33,18 +33,20 @@ const Reports = () => {
     const [topFaculty, setTopFaculty] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [feedbackRound, setFeedbackRound] = useState('1'); // Default Round 1
 
     useEffect(() => {
         fetchReportData();
-    }, []);
+    }, [feedbackRound]); // Refetch on round change
 
     const fetchReportData = async () => {
         try {
             setLoading(true);
+            const params = { feedbackRound };
             const [statsRes, deptRes, facultyRes] = await Promise.all([
-                api.get('/reports/stats'),
-                api.get('/reports/department-distribution'),
-                api.get('/reports/top-faculty')
+                api.get('/reports/stats', { params }),
+                api.get('/reports/department-distribution', { params }),
+                api.get('/reports/top-faculty', { params })
             ]);
 
             setStats(statsRes.data.data);
@@ -96,7 +98,21 @@ const Reports = () => {
 
     return (
         <div className="reports-container">
-            <h1 className="page-title">Feedback Analysis & Reports</h1>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1 className="page-title" style={{ margin: 0 }}>Feedback Analysis & Reports</h1>
+                <div className="controls">
+                    <label style={{ marginRight: '10px', fontWeight: 'bold' }}>Round: </label>
+                    <select
+                        value={feedbackRound}
+                        onChange={(e) => setFeedbackRound(e.target.value)}
+                        style={{ padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }}
+                    >
+                        <option value="1">Round 1</option>
+                        <option value="2">Round 2</option>
+                        <option value="All">All Rounds</option>
+                    </select>
+                </div>
+            </div>
 
             {/* Overall Stats Cards */}
             <div className="stats-grid">

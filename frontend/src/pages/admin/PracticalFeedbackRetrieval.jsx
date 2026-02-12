@@ -11,6 +11,7 @@ const PracticalFeedbackRetrieval = () => {
         department: user?.department !== 'All' ? user.department : 'Computer - AIML',
         class: 'SE',
         division: 'All', // Changed default to 'All'
+        feedbackRound: '1', // Default to Round 1
         fromDate: '',
         toDate: '',
     });
@@ -33,7 +34,10 @@ const PracticalFeedbackRetrieval = () => {
         try {
             setLoading(true);
             const response = await api.get(`/feedback/faculty/${facultyId}`, {
-                params: { feedbackType: 'practical' }
+                params: {
+                    feedbackType: 'practical',
+                    feedbackRound: filters.feedbackRound
+                }
             });
             if (response.data.success) {
                 setSelectedFeedback({
@@ -62,6 +66,7 @@ const PracticalFeedbackRetrieval = () => {
                 department: filters.department,
                 class: filters.class,
                 feedbackType: 'practical',
+                feedbackRound: filters.feedbackRound,
             };
 
             if (filters.division !== 'All') {
@@ -159,6 +164,26 @@ const PracticalFeedbackRetrieval = () => {
                         </div>
 
                         <div className="form-group">
+                            <label htmlFor="feedbackRound" className="form-label">
+                                Feedback Round
+                            </label>
+                            <select
+                                id="feedbackRound"
+                                name="feedbackRound"
+                                className="form-select"
+                                value={filters.feedbackRound}
+                                onChange={handleChange}
+                                required
+                            >
+                                <option value="1">Round 1</option>
+                                <option value="2">Round 2</option>
+                                <option value="All">All Rounds</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
                             <label htmlFor="fromDate" className="form-label">
                                 From
                             </label>
@@ -171,9 +196,7 @@ const PracticalFeedbackRetrieval = () => {
                                 onChange={handleChange}
                             />
                         </div>
-                    </div>
 
-                    <div className="form-row">
                         <div className="form-group">
                             <label htmlFor="toDate" className="form-label">
                                 To
@@ -341,7 +364,7 @@ const PracticalFeedbackRetrieval = () => {
                                     <div style={{ textAlign: 'left' }}>
                                         <div><strong>Department :</strong> CSE AIML</div>
                                         <div style={{ marginTop: '5px' }}><strong>Academic Year :</strong> {new Date().getFullYear()}-{new Date().getFullYear() + 1}</div>
-                                        <div style={{ marginTop: '5px' }}><strong>Report :</strong> Practical Feedback</div>
+                                        <div style={{ marginTop: '5px' }}><strong>Report :</strong> Practical Feedback {filters.feedbackRound !== 'All' ? `(Round ${filters.feedbackRound})` : ''}</div>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         {/* Date removed */}
@@ -415,13 +438,14 @@ const PracticalFeedbackRetrieval = () => {
                         /* Detailed View for Specific Division */
                         feedbacks.map((item, index) => (
                             <div key={index} className="detailed-report-page" style={{
-                                height: '48vh',
+                                height: '45vh', // Slightly reduced
                                 boxSizing: 'border-box',
                                 padding: '5px 20px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 pageBreakAfter: (index + 1) % 2 === 0 ? 'always' : 'auto',
                                 borderBottom: (index + 1) % 2 !== 0 ? '2px dashed #999' : 'none',
+                                marginBottom: (index + 1) % 2 !== 0 ? '10px' : '0',
                                 overflow: 'hidden'
                             }}>
                                 <div style={{ textAlign: 'center', marginBottom: '2px' }}>
@@ -454,7 +478,7 @@ const PracticalFeedbackRetrieval = () => {
                                                 return (
                                                     <tr key={key}>
                                                         <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{qIdx + 1}</td>
-                                                        <td style={{ border: '1px solid #000', padding: '3px', fontSize: '1.1rem' }}>{question}</td>
+                                                        <td style={{ border: '1px solid #000', padding: '3px', fontSize: '0.9rem' }}>{question}</td>
                                                         <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', fontWeight: 'bold' }}>{rating}</td>
                                                     </tr>
                                                 );

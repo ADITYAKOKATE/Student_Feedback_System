@@ -9,12 +9,25 @@ export const getFeedbackStatus = async (req, res) => {
 
         // Default to false if not set
         if (!config) {
-            config = await Config.create({ key: 'activeFeedbackSession', value: false });
+            config = await Config.create({
+                key: 'activeFeedbackSession',
+                value: { isActive: false, activeRound: '1' }
+            });
+        }
+
+        // Handle migration from boolean simple value to object
+        let status = config.value;
+        if (typeof status === 'boolean') {
+            status = { isActive: status, activeRound: '1' };
+            // Update it
+            config.value = status;
+            await config.save();
         }
 
         res.status(200).json({
             success: true,
-            isActive: config.value,
+            isActive: status.isActive,
+            activeRound: status.activeRound || '1'
         });
     } catch (error) {
         console.error('Get feedback status error:', error);
@@ -27,21 +40,27 @@ export const getFeedbackStatus = async (req, res) => {
 // @access  Private (Admin)
 export const toggleFeedbackSession = async (req, res) => {
     try {
-        const { isActive } = req.body; // Expect boolean
+        const { isActive, activeRound } = req.body;
 
         let config = await Config.findOne({ key: 'activeFeedbackSession' });
 
+        const newValue = {
+            isActive: isActive !== undefined ? isActive : false,
+            activeRound: activeRound || '1'
+        };
+
         if (!config) {
-            config = await Config.create({ key: 'activeFeedbackSession', value: isActive });
+            config = await Config.create({ key: 'activeFeedbackSession', value: newValue });
         } else {
-            config.value = isActive;
+            config.value = newValue;
             await config.save();
         }
 
         res.status(200).json({
             success: true,
-            message: `Feedback session ${isActive ? 'activated' : 'deactivated'}`,
-            isActive: config.value,
+            message: `Feedback session updated: ${newValue.isActive ? 'Active' : 'Inactive'} (Round ${newValue.activeRound})`,
+            isActive: newValue.isActive,
+            activeRound: newValue.activeRound
         });
     } catch (error) {
         console.error('Toggle feedback session error:', error);

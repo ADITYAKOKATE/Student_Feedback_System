@@ -7,15 +7,20 @@ import Student from '../models/Student.js';
 // @access  Private (Admin)
 export const getOverallStats = async (req, res) => {
     try {
+        const { feedbackRound = '1' } = req.query;
         const query = {};
+        if (feedbackRound && feedbackRound !== 'All') {
+            query.feedbackRound = feedbackRound;
+        }
+
         // Enforce department access
         if (req.user.department !== 'All') {
             query.department = req.user.department;
         }
 
         const totalFeedback = await Feedback.countDocuments(query);
-        const totalStudents = await Student.countDocuments(query);
-        const totalFaculty = await Faculty.countDocuments(query);
+        const totalStudents = await Student.countDocuments(req.user.department !== 'All' ? { department: req.user.department } : {});
+        const totalFaculty = await Faculty.countDocuments(req.user.department !== 'All' ? { department: req.user.department } : {});
 
         // Improved Aggregation for Map ratings:
         const stats = await Feedback.aggregate([
@@ -48,8 +53,8 @@ export const getOverallStats = async (req, res) => {
             }
         ]);
 
-        const theoryAvg = stats[0].theoryStats.length > 0 ? stats[0].theoryStats[0].avgRating : 0;
-        const practicalAvg = stats[0].practicalStats.length > 0 ? stats[0].practicalStats[0].avgRating : 0;
+        const theoryAvg = stats[0]?.theoryStats.length > 0 ? stats[0].theoryStats[0].avgRating : 0;
+        const practicalAvg = stats[0]?.practicalStats.length > 0 ? stats[0].practicalStats[0].avgRating : 0;
 
         res.json({
             success: true,
@@ -72,7 +77,12 @@ export const getOverallStats = async (req, res) => {
 // @access  Private (Admin)
 export const getDepartmentDistribution = async (req, res) => {
     try {
+        const { feedbackRound = '1' } = req.query;
         const query = {};
+        if (feedbackRound && feedbackRound !== 'All') {
+            query.feedbackRound = feedbackRound;
+        }
+
         // Enforce department access
         if (req.user.department !== 'All') {
             query.department = req.user.department;
@@ -103,7 +113,11 @@ export const getDepartmentDistribution = async (req, res) => {
 // @access  Private (Admin)
 export const getTopFaculty = async (req, res) => {
     try {
+        const { feedbackRound = '1' } = req.query;
         const query = {};
+        if (feedbackRound && feedbackRound !== 'All') {
+            query.feedbackRound = feedbackRound;
+        }
 
         // Note: We filter initial feedbacks by department if needed
         if (req.user.department !== 'All') {
@@ -123,6 +137,16 @@ export const getTopFaculty = async (req, res) => {
                 }
             },
             { $unwind: "$allItems" },
+            // Lookup faculty info EARLY to grouping by Name
+            {
+                $lookup: {
+                    from: "faculties",
+                    localField: "allItems.faculty",
+                    foreignField: "_id",
+                    as: "facultyInfo"
+                }
+            },
+            { $unwind: "$facultyInfo" },
             {
                 $addFields: {
                     ratingValues: { $objectToArray: "$allItems.ratings" }
@@ -131,23 +155,27 @@ export const getTopFaculty = async (req, res) => {
             { $unwind: "$ratingValues" },
             {
                 $group: {
-                    _id: "$allItems.faculty",
-                    avgRating: { $avg: "$ratingValues.v" }
+                    _id: "$facultyInfo.facultyName", // Group by Name
+                    avgRating: { $avg: "$ratingValues.v" },
+                    subjects: { $addToSet: "$facultyInfo.subjectName" } // Collect unique subjects
                 }
             },
-            {
-                $lookup: {
-                    from: "faculties",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "facultyInfo"
-                }
-            },
-            { $unwind: "$facultyInfo" },
             {
                 $project: {
-                    name: "$facultyInfo.facultyName",
-                    subject: "$facultyInfo.subjectName",
+                    name: "$_id",
+                    subject: {
+                        $reduce: {
+                            input: "$subjects",
+                            initialValue: "",
+                            in: {
+                                $cond: [
+                                    { $eq: ["$$value", ""] },
+                                    "$$this",
+                                    { $concat: ["$$value", ", ", "$$this"] }
+                                ]
+                            }
+                        }
+                    },
                     avgRating: { $round: ["$avgRating", 2] }
                 }
             },

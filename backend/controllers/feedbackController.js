@@ -1,6 +1,7 @@
 import Feedback from '../models/Feedback.js';
 import Student from '../models/Student.js';
 import Faculty from '../models/Faculty.js';
+import Config from '../models/Config.js';
 
 // @desc    Submit consolidated feedback
 // @route   POST /api/feedback/submit
@@ -17,16 +18,28 @@ export const submitFeedback = async (req, res) => {
 
         const studentId = req.user.id; // From middleware
 
+        // Check active feedback round
+        let config = await Config.findOne({ key: 'activeFeedbackSession' });
+        // Robust check: migration might not have happened if admin didn't toggle yet
+        let activeRound = '1';
+        if (config && config.value && typeof config.value === 'object' && config.value.activeRound) {
+            activeRound = config.value.activeRound;
+        }
+
         // Check if student exists
         const student = await Student.findById(studentId);
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student not found' });
         }
 
-        // Check if feedback already submitted
-        const existingFeedback = await Feedback.findOne({ student: studentId });
+        // Check if feedback already submitted for THIS round
+        const existingFeedback = await Feedback.findOne({
+            student: studentId,
+            feedbackRound: activeRound
+        });
+
         if (existingFeedback) {
-            return res.status(400).json({ success: false, message: 'Feedback already submitted.' });
+            return res.status(400).json({ success: false, message: `Feedback already submitted for Round ${activeRound}.` });
         }
 
         // Create unified feedback document
@@ -39,17 +52,11 @@ export const submitFeedback = async (req, res) => {
             practical: practical || [],
             library: library || {},
             facilities: facilities || {},
+            feedbackRound: activeRound
         });
 
-        // Update student's feedback status (simply mark as given)
-        // We can just use one flag or keep both true for backward compatibility logic if needed, 
-        // but ideally we should update Student model too if it has specific flags. 
-        // For now, let's assume we mark them all potentially.
-        if (student.feedbackGiven) {
-            student.feedbackGiven.theory = true;
-            student.feedbackGiven.practical = true;
-            await student.save();
-        }
+        // We ignore legacy student.feedbackGiven flags as they don't support multi-round.
+        // Future cleanup: Remove feedbackGiven from Student model.
 
         return res.status(201).json({
             success: true,
@@ -113,11 +120,25 @@ export const getFeedbackReports = async (req, res) => {
             class: className,
             division,
             feedbackType, // 'theory', 'practical', etc.
+            feedbackRound, // '1' or '2'
             fromDate,
             toDate,
         } = req.query;
 
         const matchStage = {};
+
+        // Filter by Feedback Round if provided, else default to '1' or handle 'All'?
+        // Existing data has no feedbackRound, so it defaults to '1' in schema.
+        // If user selects "Round 2", we maximize match.
+        if (feedbackRound && feedbackRound !== 'All') {
+            matchStage.feedbackRound = feedbackRound;
+        } else {
+            // If not provided, should we show all? Or default to latest?
+            // Let's assume 'All' means don't filter.
+            // If frontend sends nothing, maybe we should default to '1'?
+            // Let's implement active check or just optional filter.
+            // For reports, 'All' is better.
+        }
 
         // Enforce Department Access
         if (req.user.department !== 'All') {
@@ -233,11 +254,17 @@ export const getFeedbackSummary = async (req, res) => {
             class: className,
             division,
             feedbackType,
+            feedbackRound,
             fromDate,
             toDate,
+            groupBy // 'division' (default) or 'class'
         } = req.query;
 
         const matchStage = {};
+
+        if (feedbackRound && feedbackRound !== 'All') {
+            matchStage.feedbackRound = feedbackRound;
+        }
 
         // Enforce Department Access
         if (req.user.department !== 'All') {
@@ -263,17 +290,25 @@ export const getFeedbackSummary = async (req, res) => {
         const summaryMap = new Map();
 
         // Helper to process a feedback item
-        const processItem = (key, name, subject, division, ratings, batch = '-') => {
+        const processItem = (key, name, subject, division, className, ratings, batch = '-', type = 'general') => {
             if (!summaryMap.has(key)) {
                 summaryMap.set(key, {
                     facultyId: key.split('_')[0], // Original ID
                     facultyName: name,
                     subjectName: subject,
-                    division: division, // Store division
-                    batch: batch, // Store batch
+                    division: groupBy === 'class' ? 'All' : (groupBy === 'faculty' ? 'All' : division),
+                    class: groupBy === 'faculty' ? 'All' : className,
+                    batch: batch,
                     totalFeedbacks: 0,
                     totalScoreSum: 0,
                     questionScores: {},
+                    // Specific fields for Analysis Report
+                    theoryUnits: {}, // Track individual class/batch averages
+                    practicalUnits: {},
+                    theoryTotal: 0,
+                    theoryCount: 0,
+                    practicalTotal: 0,
+                    practicalCount: 0
                 });
             }
 
@@ -284,7 +319,32 @@ export const getFeedbackSummary = async (req, res) => {
             if (values.length > 0) {
                 const sum = values.reduce((a, b) => a + b, 0);
                 const avg = sum / values.length;
-                stats.totalScoreSum += avg;
+                stats.totalScoreSum += avg; // Keep this for general stats if needed
+
+                // Unit Level Aggregation for Analysis Report
+                if (groupBy === 'faculty') {
+                    // Key to identify unique teaching unit: Class + Division + Subject (+ Batch)
+                    const unitKey = `${className}_${division}_${subject}_${batch}`;
+
+                    if (type === 'theory') {
+                        if (!stats.theoryUnits[unitKey]) stats.theoryUnits[unitKey] = { sum: 0, count: 0 };
+                        stats.theoryUnits[unitKey].sum += avg;
+                        stats.theoryUnits[unitKey].count += 1;
+                    } else if (type === 'practical') {
+                        if (!stats.practicalUnits[unitKey]) stats.practicalUnits[unitKey] = { sum: 0, count: 0 };
+                        stats.practicalUnits[unitKey].sum += avg;
+                        stats.practicalUnits[unitKey].count += 1;
+                    }
+                } else {
+                    // Fallback/Original Logic for other reports
+                    if (type === 'theory') {
+                        stats.theoryTotal += avg;
+                        stats.theoryCount += 1;
+                    } else if (type === 'practical') {
+                        stats.practicalTotal += avg;
+                        stats.practicalCount += 1;
+                    }
+                }
 
                 for (const [qKey, value] of Object.entries(ratings)) {
                     if (!stats.questionScores[qKey]) {
@@ -301,12 +361,21 @@ export const getFeedbackSummary = async (req, res) => {
             if (!feedbackType || feedbackType === 'theory') {
                 fb.theory.forEach(item => {
                     if (item.faculty) {
+                        const key = groupBy === 'class'
+                            ? `${item.faculty._id.toString()}_${fb.class}_${item.faculty.subjectName}` // Group by faculty + class + subject
+                            : (groupBy === 'faculty'
+                                ? `${item.faculty.facultyName}` // Group by Name to merge duplicate IDs
+                                : `${item.faculty._id.toString()}_${fb.division}`);
+
                         processItem(
-                            item.faculty._id.toString() + '_' + fb.division, // Unique key per faculty per division
+                            key,
                             item.faculty.facultyName,
                             item.faculty.subjectName,
-                            fb.division, // Pass division
-                            item.ratings
+                            fb.division,
+                            fb.class,
+                            item.ratings,
+                            '-',
+                            'theory'
                         );
                     }
                 });
@@ -317,29 +386,39 @@ export const getFeedbackSummary = async (req, res) => {
                 fb.practical.forEach(item => {
                     if (item.faculty) {
                         const batch = fb.student?.practicalBatch || '-';
+                        const key = groupBy === 'class'
+                            ? `${item.faculty._id.toString()}_${fb.class}_${item.faculty.subjectName}_${batch}` // Group by faculty + class + subject + batch (Separate batches, aggregate divisions)
+                            : (groupBy === 'faculty'
+                                ? `${item.faculty.facultyName}` // Group by Name
+                                : `${item.faculty._id.toString()}_${fb.division}_${batch}`);
+
                         processItem(
-                            item.faculty._id.toString() + '_' + fb.division + '_' + batch, // Include batch in key
+                            key,
                             item.faculty.facultyName,
                             item.faculty.subjectName,
                             fb.division,
+                            fb.class,
                             item.ratings,
-                            batch
+                            batch,
+                            'practical'
                         );
                     }
                 });
             }
 
             // Library
-            if (!feedbackType || feedbackType === 'library') {
+            if ((!feedbackType || feedbackType === 'library') && groupBy !== 'faculty') {
                 if (fb.library && fb.library.ratings && Object.keys(fb.library.ratings).length > 0) {
-                    processItem('library_' + fb.division, 'Library', 'General', fb.division, fb.library.ratings);
+                    const key = groupBy === 'class' ? `library_${fb.class}` : `library_${fb.division}`;
+                    processItem(key, 'Library', 'General', fb.division, fb.class, fb.library.ratings);
                 }
             }
 
             // Facilities
-            if (!feedbackType || feedbackType === 'other_facilities') {
+            if ((!feedbackType || feedbackType === 'other_facilities') && groupBy !== 'faculty') {
                 if (fb.facilities && fb.facilities.ratings && Object.keys(fb.facilities.ratings).length > 0) {
-                    processItem('other_facilities_' + fb.division, 'Other Facilities', 'General', fb.division, fb.facilities.ratings);
+                    const key = groupBy === 'class' ? `other_facilities_${fb.class}` : `other_facilities_${fb.division}`;
+                    processItem(key, 'Other Facilities', 'General', fb.division, fb.class, fb.facilities.ratings);
                 }
             }
         });
@@ -350,11 +429,37 @@ export const getFeedbackSummary = async (req, res) => {
                 questionAverageRatings[key] = (data.sum / data.count).toFixed(2);
             }
 
+            // Calculate Final Averages based on Units (if groupBy faculty)
+            let finalTheoryAvg = null;
+            let finalPracticalAvg = null;
+
+            if (groupBy === 'faculty') {
+                // Theory: Avg of (Unit Avgs)
+                const tUnits = Object.values(item.theoryUnits);
+                if (tUnits.length > 0) {
+                    const totalUnitAvg = tUnits.reduce((acc, unit) => acc + (unit.sum / unit.count), 0);
+                    finalTheoryAvg = (totalUnitAvg / tUnits.length).toFixed(2);
+                }
+
+                // Practical: Avg of (Unit Avgs)
+                const pUnits = Object.values(item.practicalUnits);
+                if (pUnits.length > 0) {
+                    const totalUnitAvg = pUnits.reduce((acc, unit) => acc + (unit.sum / unit.count), 0);
+                    finalPracticalAvg = (totalUnitAvg / pUnits.length).toFixed(2);
+                }
+            } else {
+                // Original Logic
+                finalTheoryAvg = item.theoryCount > 0 ? (item.theoryTotal / item.theoryCount).toFixed(2) : null;
+                finalPracticalAvg = item.practicalCount > 0 ? (item.practicalTotal / item.practicalCount).toFixed(2) : null;
+            }
+
             return {
                 ...item,
                 averageRating: item.totalFeedbacks > 0
                     ? (item.totalScoreSum / item.totalFeedbacks).toFixed(2)
                     : 0,
+                theoryAverage: finalTheoryAvg,
+                practicalAverage: finalPracticalAvg,
                 questionAverageRatings
             };
         });
@@ -381,15 +486,21 @@ export const getFeedbackSummary = async (req, res) => {
 export const getFeedbackByFaculty = async (req, res) => {
     try {
         const { facultyId } = req.params;
-        // const { feedbackType } = req.query; // Usually inferred from faculty type or we check both
+        const { feedbackRound } = req.query;
 
-        // Find docs that contain this faculty
-        const feedbacks = await Feedback.find({
+        const query = {
             $or: [
                 { 'theory.faculty': facultyId },
                 { 'practical.faculty': facultyId }
             ]
-        })
+        };
+
+        if (feedbackRound && feedbackRound !== 'All') {
+            query.feedbackRound = feedbackRound;
+        }
+
+        // Find docs that contain this faculty
+        const feedbacks = await Feedback.find(query)
             .populate('student', 'grNo username')
             .sort({ submittedAt: -1 });
 
@@ -467,11 +578,16 @@ export const exportFeedbackData = async (req, res) => {
             class: className,
             division,
             feedbackType,
+            feedbackRound,
             fromDate,
             toDate,
         } = req.query;
 
         const matchStage = {};
+
+        if (feedbackRound && feedbackRound !== 'All') {
+            matchStage.feedbackRound = feedbackRound;
+        }
 
         // Enforce Department Access
         if (req.user.department !== 'All') {
@@ -577,6 +693,30 @@ export const getFeedbackFormData = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Student not authenticated' });
         }
 
+        // Get currently active round
+        let config = await Config.findOne({ key: 'activeFeedbackSession' });
+        let activeRound = '1';
+        let isActive = false;
+
+        if (config && config.value) {
+            if (typeof config.value === 'object') {
+                activeRound = config.value.activeRound || '1';
+                isActive = config.value.isActive;
+            } else {
+                // legacy boolean
+                isActive = config.value;
+            }
+        }
+
+        if (!isActive) {
+            // Optional: Return specific message if session is closed? 
+            // But existing frontend might just look at isSubmitted. 
+            // Let's rely on standard flow but maybe we can signal "Closed".
+            // For now, we'll proceed but `isSubmitted` check might be irrelevant 
+            // if the whole form is inaccessible. 
+            // Actually, usually we block at the UI level or here.
+        }
+
         const theoryFaculty = await Faculty.find({
             department: student.department,
             class: student.class,
@@ -595,7 +735,11 @@ export const getFeedbackFormData = async (req, res) => {
             isPracticalFaculty: true,
         }).select('facultyName subjectName _id');
 
-        const existingFeedback = await Feedback.exists({ student: student._id });
+        // Check if feedback exists for THIS round
+        const existingFeedback = await Feedback.exists({
+            student: student._id,
+            feedbackRound: activeRound
+        });
 
         return res.status(200).json({
             success: true,
@@ -608,7 +752,8 @@ export const getFeedbackFormData = async (req, res) => {
                     division: student.division,
                     department: student.department
                 },
-                isSubmitted: !!existingFeedback
+                isSubmitted: !!existingFeedback,
+                activeRound: activeRound
             }
         });
 

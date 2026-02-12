@@ -31,6 +31,7 @@ const StudentRegistration = () => {
     const [filterBatch, setFilterBatch] = useState('All');
     const [filterEligibility, setFilterEligibility] = useState('All');
     const [filterFeedbackGiven, setFilterFeedbackGiven] = useState('All');
+    const [feedbackRound, setFeedbackRound] = useState('1'); // Default Round 1
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     const [editingId, setEditingId] = useState(null);
@@ -42,7 +43,7 @@ const StudentRegistration = () => {
     useEffect(() => {
         fetchStudents();
         setSelectedStudentIds([]); // Clear selection on tab change
-    }, [activeTab]);
+    }, [activeTab, feedbackRound]);
 
     // Fetch electives when class changes in the form
     useEffect(() => {
@@ -77,7 +78,7 @@ const StudentRegistration = () => {
     const fetchStudents = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/students?class=${activeTab}`);
+            const response = await api.get(`/students?class=${activeTab}&feedbackRound=${feedbackRound}`);
             if (response.data.success) {
                 setStudentList(response.data.data);
             }
@@ -329,7 +330,7 @@ const StudentRegistration = () => {
             const matchesEligibility = filterEligibility === 'All' ||
                 (filterEligibility === 'Eligible' ? student.eligibility : !student.eligibility);
 
-            const hasGivenFeedback = student.feedbackGiven?.theory || student.feedbackGiven?.practical;
+            const hasGivenFeedback = student.isFeedbackSubmitted; // Updated to use API flag
             const matchesFeedback = filterFeedbackGiven === 'All' ||
                 (filterFeedbackGiven === 'Yes' ? hasGivenFeedback : !hasGivenFeedback);
 
@@ -408,7 +409,7 @@ const StudentRegistration = () => {
                                     </span>
                                 </td>
                                 <td data-label="Feedback given?">
-                                    {student.feedbackGiven?.theory || student.feedbackGiven?.practical
+                                    {student.isFeedbackSubmitted
                                         ? 'Yes'
                                         : 'No'}
                                 </td>
@@ -622,12 +623,23 @@ const StudentRegistration = () => {
                             <option value="Not Eligible">No</option>
                         </select>
 
-                        <label>Feedback:</label>
-                        <select value={filterFeedbackGiven} onChange={(e) => setFilterFeedbackGiven(e.target.value)} className="filter-select">
-                            <option value="All">All</option>
-                            <option value="Yes">Given</option>
-                            <option value="No">Pending</option>
-                        </select>
+                        <label>Feedback (Round):</label>
+                        <div style={{ display: 'inline-flex', gap: '5px' }}>
+                            <select
+                                value={feedbackRound}
+                                onChange={(e) => setFeedbackRound(e.target.value)}
+                                className="filter-select"
+                                style={{ marginRight: '5px', width: '90px' }}
+                            >
+                                <option value="1">Round 1</option>
+                                <option value="2">Round 2</option>
+                            </select>
+                            <select value={filterFeedbackGiven} onChange={(e) => setFilterFeedbackGiven(e.target.value)} className="filter-select">
+                                <option value="All">All</option>
+                                <option value="Yes">Given</option>
+                                <option value="No">Pending</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

@@ -80,14 +80,20 @@ const feedbackSchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
         },
+        feedbackRound: {
+            type: String,
+            enum: ['1', '2'],
+            default: '1',
+            required: true
+        }
     },
     {
         timestamps: true,
     }
 );
 
-// Index to ensure one submission per student (you might want to scope this by term/semester later)
-feedbackSchema.index({ student: 1 }, { unique: true });
+// Index to ensure one submission per student per feedback round
+feedbackSchema.index({ student: 1, feedbackRound: 1 }, { unique: true });
 
 const Feedback = mongoose.model('Feedback', feedbackSchema);
 

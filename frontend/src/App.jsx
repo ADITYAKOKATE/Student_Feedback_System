@@ -8,6 +8,9 @@ import StudentRegistration from './pages/admin/StudentRegistration';
 import TheoryFeedbackRetrieval from './pages/admin/TheoryFeedbackRetrieval';
 import PracticalFeedbackRetrieval from './pages/admin/PracticalFeedbackRetrieval';
 import FacilitiesFeedbackRetrieval from './pages/admin/FacilitiesFeedbackRetrieval';
+import DepartmentFeedbackRetrieval from './pages/admin/DepartmentFeedbackRetrieval';
+import DepartmentPracticalFeedbackRetrieval from './pages/admin/DepartmentPracticalFeedbackRetrieval';
+import DepartmentAnalysisReport from './pages/admin/DepartmentAnalysisReport';
 import StudentLogin from './pages/student/StudentLogin';
 import FeedbackWizard from './pages/student/FeedbackWizard';
 import Reports from './pages/admin/Reports';
@@ -56,6 +59,9 @@ function App() {
             <Route path="theory-feedback" element={<TheoryFeedbackRetrieval />} />
             <Route path="practical-feedback" element={<PracticalFeedbackRetrieval />} />
             <Route path="facilities-feedback" element={<FacilitiesFeedbackRetrieval />} />
+            <Route path="department-feedback" element={<DepartmentFeedbackRetrieval />} />
+            <Route path="department-practical-feedback" element={<DepartmentPracticalFeedbackRetrieval />} />
+            <Route path="analysis-report" element={<DepartmentAnalysisReport />} />
             <Route path="reports" element={<Reports />} />
           </Route>
 

@@ -20,6 +20,7 @@ const FacilitiesFeedbackRetrieval = () => {
         fromDate: '',
         toDate: '',
         feedbackCategory: 'All', // New filter
+        feedbackRound: '1', // Default to Round 1
     });
 
     // For detail modal
@@ -274,6 +275,22 @@ const FacilitiesFeedbackRetrieval = () => {
                     </div>
 
                     <div className="form-group">
+                        <label className="form-label">Feedback Round</label>
+                        <select
+                            name="feedbackRound"
+                            className="form-select"
+                            value={filters.feedbackRound}
+                            onChange={handleFilterChange}
+                        >
+                            <option value="1">Round 1</option>
+                            <option value="2">Round 2</option>
+                            <option value="All">All Rounds</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="form-row">
+                    <div className="form-group">
                         <label className="form-label">From</label>
                         <input
                             type="date"
@@ -302,89 +319,90 @@ const FacilitiesFeedbackRetrieval = () => {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="spinner-container"><div className="spinner"></div></div>
-            ) : (
-                <div className="feedback-results">
-                    {/* Library Section */}
-                    {libraryFeedbacks.length > 0 && (
-                        <div className="section-block" style={{ marginBottom: '2rem' }}>
-                            <h3 className="section-title">Library Feedback</h3>
-                            <div className="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Facility Type</th>
-                                            {filters.division === 'All' && <th>Division</th>}
-                                            <th>Total Feedbacks</th>
-                                            <th>Average Rating</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {libraryFeedbacks.map((item) => (
-                                            <tr key={item.facultyId}>
-                                                <td>{item.facultyName}</td>
-                                                {filters.division === 'All' && <td>{item.division}</td>}
-                                                <td>{item.totalFeedbacks}</td>
-                                                <td className={getAverageColor(item.averageRating)} style={{ fontWeight: 'bold' }}>
-                                                    {item.averageRating} / 5
-                                                </td>
-                                                <td>
-                                                    <button className="btn btn-sm btn-primary" onClick={() => handleViewDetails(item)}>
-                                                        View Details
-                                                    </button>
-                                                </td>
+            {
+                loading ? (
+                    <div className="spinner-container"><div className="spinner"></div></div>
+                ) : (
+                    <div className="feedback-results">
+                        {/* Library Section */}
+                        {libraryFeedbacks.length > 0 && (
+                            <div className="section-block" style={{ marginBottom: '2rem' }}>
+                                <h3 className="section-title">Library Feedback</h3>
+                                <div className="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Facility Type</th>
+                                                {filters.division === 'All' && <th>Division</th>}
+                                                <th>Total Feedbacks</th>
+                                                <th>Average Rating</th>
+                                                <th>Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {libraryFeedbacks.map((item) => (
+                                                <tr key={item.facultyId}>
+                                                    <td>{item.facultyName}</td>
+                                                    {filters.division === 'All' && <td>{item.division}</td>}
+                                                    <td>{item.totalFeedbacks}</td>
+                                                    <td className={getAverageColor(item.averageRating)} style={{ fontWeight: 'bold' }}>
+                                                        {item.averageRating} / 5
+                                                    </td>
+                                                    <td>
+                                                        <button className="btn btn-sm btn-primary" onClick={() => handleViewDetails(item)}>
+                                                            View Details
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* Facilities Section */}
-                    {facilitiesFeedbacks.length > 0 && (
-                        <div className="section-block">
-                            <h3 className="section-title">Other Facilities Feedback</h3>
-                            <div className="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Facility Type</th>
-                                            {filters.division === 'All' && <th>Division</th>}
-                                            <th>Total Feedbacks</th>
-                                            <th>Average Rating</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {facilitiesFeedbacks.map((item) => (
-                                            <tr key={item.facultyId}>
-                                                <td>{item.facultyName}</td>
-                                                {filters.division === 'All' && <td>{item.division}</td>}
-                                                <td>{item.totalFeedbacks}</td>
-                                                <td className={getAverageColor(item.averageRating)} style={{ fontWeight: 'bold' }}>
-                                                    {item.averageRating} / 5
-                                                </td>
-                                                <td>
-                                                    <button className="btn btn-sm btn-primary" onClick={() => handleViewDetails(item)}>
-                                                        View Details
-                                                    </button>
-                                                </td>
+                        {/* Facilities Section */}
+                        {facilitiesFeedbacks.length > 0 && (
+                            <div className="section-block">
+                                <h3 className="section-title">Other Facilities Feedback</h3>
+                                <div className="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Facility Type</th>
+                                                {filters.division === 'All' && <th>Division</th>}
+                                                <th>Total Feedbacks</th>
+                                                <th>Average Rating</th>
+                                                <th>Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {facilitiesFeedbacks.map((item) => (
+                                                <tr key={item.facultyId}>
+                                                    <td>{item.facultyName}</td>
+                                                    {filters.division === 'All' && <td>{item.division}</td>}
+                                                    <td>{item.totalFeedbacks}</td>
+                                                    <td className={getAverageColor(item.averageRating)} style={{ fontWeight: 'bold' }}>
+                                                        {item.averageRating} / 5
+                                                    </td>
+                                                    <td>
+                                                        <button className="btn btn-sm btn-primary" onClick={() => handleViewDetails(item)}>
+                                                            View Details
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {combinedFeedbacks.length === 0 && (
-                        <div className="alert alert-info">No feedback data found for the selected criteria.</div>
-                    )}
-                </div>
-            )
+                        {combinedFeedbacks.length === 0 && (
+                            <div className="alert alert-info">No feedback data found for the selected criteria.</div>
+                        )}
+                    </div>
+                )
             }
 
             {/* Print Friendly Report - Combined */}
@@ -412,7 +430,7 @@ const FacilitiesFeedbackRetrieval = () => {
                                 {/* Content */}
                                 <div className="report-card" style={{ border: 'none', boxShadow: 'none', flex: '1 1 auto' }}>
                                     <h3 style={{ textAlign: 'center', marginBottom: '10px', fontSize: '1.2rem' }}>
-                                        {item.facultyName} Feedback Report
+                                        {item.facultyName} Feedback Report {filters.feedbackRound !== 'All' ? `(Round ${filters.feedbackRound})` : ''}
                                     </h3>
 
                                     <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '1rem' }}>

@@ -1,4 +1,5 @@
 import Student from '../models/Student.js';
+import Feedback from '../models/Feedback.js';
 
 // @desc    Register new student
 // @route   POST /api/students/register
@@ -212,9 +213,8 @@ export const bulkRegisterStudents = async (req, res) => {
 // @access  Private (Admin)
 export const getAllStudents = async (req, res) => {
     try {
-        const { department, class: className, division, practicalBatch } = req.query;
+        const { department, class: className, division, practicalBatch, feedbackRound = '1' } = req.query;
 
-        // Build filter object
         // Build filter object
         const filter = {};
 
@@ -229,9 +229,29 @@ export const getAllStudents = async (req, res) => {
         if (division) filter.division = division;
         if (practicalBatch) filter.practicalBatch = practicalBatch;
 
-        const students = await Student.find(filter)
+        // Get students as plain objects
+        let students = await Student.find(filter)
             .select('-password')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Fetch feedback status for these students for the specific round
+        const studentIds = students.map(s => s._id);
+
+        // Find feedbacks for these students and the specific round
+        const feedbacks = await Feedback.find({
+            student: { $in: studentIds },
+            feedbackRound: feedbackRound
+        }).select('student');
+
+        // Create a set of student IDs who have submitted feedback
+        const feedbackMap = new Set(feedbacks.map(f => f.student.toString()));
+
+        // Attach isFeedbackSubmitted flag
+        students = students.map(student => ({
+            ...student,
+            isFeedbackSubmitted: feedbackMap.has(student._id.toString())
+        }));
 
         return res.status(200).json({
             success: true,

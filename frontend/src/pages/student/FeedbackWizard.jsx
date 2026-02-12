@@ -206,7 +206,7 @@ const FeedbackWizard = () => {
         <div className="feedback-wizard">
             <header className="wizard-header">
                 <div className="header-content">
-                    <h3>Student Feedback</h3>
+                    <h3>Student Feedback {formData?.activeRound ? `(Round ${formData.activeRound})` : ''}</h3>
                     {studentInfo && (
                         <div className="student-badge">
                             <span>{studentInfo.class} {studentInfo.division} {studentInfo.department}</span>
