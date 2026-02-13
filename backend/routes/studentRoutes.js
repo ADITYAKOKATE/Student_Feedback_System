@@ -9,6 +9,7 @@ import {
     toggleEligibility,
     resetFeedback,
     resetPassword,
+    bulkUpdateEligibility,
 } from '../controllers/studentController.js';
 import { authenticate, isAdmin } from '../middleware/auth.js';
 
@@ -41,5 +42,8 @@ router.patch('/:id/reset-feedback', resetFeedback);
 
 // Reset password
 router.patch('/:id/reset-password', resetPassword);
+
+// Bulk update eligibility
+router.post('/bulk-eligibility', bulkUpdateEligibility);
 
 export default router;

@@ -1,116 +1,121 @@
-
-import http from 'http';
-
-const BASE_URL_HOST = 'localhost';
-const BASE_URL_PORT = 5000;
-const BASE_PATH = '/api';
-
-const credentials = { username: 'admin', password: 'admin123' };
-
-function request(path, options, body) {
-    return new Promise((resolve, reject) => {
-        const reqOptions = {
-            hostname: BASE_URL_HOST,
-            port: BASE_URL_PORT,
-            path: BASE_PATH + path,
-            method: options.method || 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(options.headers || {})
-            }
-        };
-
-        const req = http.request(reqOptions, (res) => {
-            let data = '';
-            res.on('data', (chunk) => data += chunk);
-            res.on('end', () => {
-                try {
-                    const json = data ? JSON.parse(data) : {};
-                    resolve({ status: res.statusCode, data: json });
-                } catch (e) {
-                    resolve({ status: res.statusCode, raw: data, error: e });
-                }
-            });
-        });
-
-        req.on('error', (e) => reject(e));
-
-        if (body) {
-            req.write(JSON.stringify(body));
-        }
-        req.end();
-    });
-}
-
-const run = async () => {
-    try {
-        console.log('Logging in...');
-        const loginRes = await request('/auth/admin/login', { method: 'POST' }, credentials);
-        if (!loginRes.data.success) throw new Error('Login failed: ' + loginRes.data.message);
-
-        const token = loginRes.data.token;
-        console.log('Login successful.');
-
-        // 2. Register
-        const students = [{
-            grNo: 'TEST_BULK_999',
-            username: 'bulk_test_user',
-            password: 'password123',
-            department: 'Computer - AIML',
-            class: 'SE',
-            division: 'A',
-            practicalBatch: 'A',
-            eligibility: true
-        }];
-
-        console.log('Step 1: Uploading initial student...');
-        const res1 = await request('/students/bulk-register', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        }, students);
-        console.log('Initial Upload Response:', JSON.stringify(res1.data, null, 2));
-
-        // 3. Update
-        students[0].division = 'B';
-        console.log('Step 2: Uploading SAME student with Division B...');
-        const res2 = await request('/students/bulk-register', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        }, students);
-        console.log('Update Upload Response:', JSON.stringify(res2.data, null, 2));
-
-        // 4. Verify
-        console.log('Step 3: Verifying change...');
-        const res3 = await request('/students?class=SE', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        // Debug array
-        console.log('Array length:', res3.data.data.length);
-        res3.data.data.forEach((s, i) => console.log(`Item ${i}: GR="${s.grNo}", Div="${s.division}"`));
-
-        const upsertedStudent = res3.data.data.find(s => s.grNo === 'TEST_BULK_999');
-
-        if (upsertedStudent) {
-            console.log(`Student found. Division: ${upsertedStudent.division}`);
-            if (upsertedStudent.division === 'B') {
-                console.log('VERIFICATION SUCCESS: Division updated to B.');
-            } else {
-                console.log('VERIFICATION FAILED: Division is ' + upsertedStudent.division);
-            }
-            // Cleanup
-            await request(`/students/${upsertedStudent._id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Cleanup: Test student deleted.');
-        } else {
-            console.log('VERIFICATION FAILED: Student not found in list (despite logging?).');
-        }
-
-    } catch (e) {
-        console.error('Script Error:', e);
-    }
+const BASE_URL = 'http://localhost:5000/api';
+const ADMIN_CREDENTIALS = {
+    username: 'admin',
+    password: 'admin123'
 };
 
-run();
+const TEST_STUDENT = {
+    grNo: 'TEST_GR_999',
+    rollNo: '99999',
+    username: 'test_student_999',
+    password: 'password123',
+    department: 'Computer - AIML',
+    class: 'SE',
+    division: 'A',
+    practicalBatch: 'A',
+    eligibility: true
+};
+
+async function post(url, data, token) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw { response: { status: res.status, data: json } };
+    return { data: json };
+}
+
+async function get(url, token) {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(url, { headers });
+    const json = await res.json();
+    if (!res.ok) throw { response: { status: res.status, data: json } };
+    return { data: json };
+}
+
+async function del(url, token) {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(url, { method: 'DELETE', headers });
+    const json = await res.json();
+    if (!res.ok) throw { response: { status: res.status, data: json } };
+    return { data: json };
+}
+
+async function runTest() {
+    try {
+        console.log('1. Logging in as Admin...');
+        const loginRes = await post(`${BASE_URL}/auth/admin/login`, ADMIN_CREDENTIALS);
+        const token = loginRes.data.token;
+        console.log('   Login successful. Token received.');
+
+        console.log('\n2. Registering/Ensuring Test Student exists...');
+        try {
+            await post(`${BASE_URL}/students/register`, TEST_STUDENT, token);
+            console.log('   Student registered.');
+        } catch (e) {
+            if (e.response && e.response.status === 400) {
+                console.log('   Student likely already exists.');
+            } else {
+                throw e;
+            }
+        }
+
+        console.log('\n3. Testing Bulk Eligibility Update (Setting to Defaulter)...');
+        const defaulterPayload = [
+            { grNo: TEST_STUDENT.grNo, defaulter: 'Yes' }
+        ];
+        const updateRes = await post(`${BASE_URL}/students/bulk-eligibility`, defaulterPayload, token);
+        console.log('   Update response:', updateRes.data);
+
+        console.log('\n4. Verifying Student Eligibility is FALSE...');
+        const verifyRes = await get(`${BASE_URL}/students?class=SE`, token);
+        const student = verifyRes.data.data.find(s => s.grNo === TEST_STUDENT.grNo);
+
+        if (student) {
+            console.log(`   Student Eligibility: ${student.eligibility}`);
+            if (student.eligibility === false) {
+                console.log('   SUCCESS: Student is marked as not eligible.');
+            } else {
+                console.error('   FAILURE: Student should be ineligible.');
+            }
+        } else {
+            console.error('   FAILURE: Student not found in list.');
+        }
+
+        console.log('\n5. Testing Bulk Eligibility Update (Setting to NON-Defaulter)...');
+        const nonDefaulterPayload = [
+            { grNo: TEST_STUDENT.grNo, defaulter: 'No' }
+        ];
+        await post(`${BASE_URL}/students/bulk-eligibility`, nonDefaulterPayload, token);
+        console.log('   Update sent.');
+
+        const verifyRes2 = await get(`${BASE_URL}/students?class=SE`, token);
+        const student2 = verifyRes2.data.data.find(s => s.grNo === TEST_STUDENT.grNo);
+        if (student2 && student2.eligibility === true) {
+            console.log('   SUCCESS: Student is marked as eligible again.');
+        } else {
+            console.error(`   FAILURE: Student should be eligible. Got: ${student2?.eligibility}`);
+        }
+
+        console.log('\n6. Cleanup...');
+        if (student) {
+            await del(`${BASE_URL}/students/${student._id}`, token);
+            console.log('   Test student deleted.');
+        }
+
+    } catch (error) {
+        console.error('TEST FAILED:', error.response ? JSON.stringify(error.response.data) : error);
+    }
+}
+
+runTest();

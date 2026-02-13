@@ -322,6 +322,57 @@ const StudentRegistration = () => {
         reader.readAsText(file);
     };
 
+    const handleDefaulterFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const text = evt.target.result;
+            const lines = text.split('\n');
+            const data = [];
+
+            // Expected Header: GR No,Defaulter
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const cols = line.split(',');
+                if (cols.length < 2) continue;
+
+                data.push({
+                    grNo: cols[0]?.trim(),
+                    defaulter: cols[1]?.trim()
+                });
+            }
+
+            if (data.length === 0) {
+                setMessage({ type: 'error', text: 'No valid data found in CSV.' });
+                return;
+            }
+
+            if (window.confirm(`Found ${data.length} records in Defaulter List. Update eligibility now?`)) {
+                setLoading(true);
+                try {
+                    const response = await api.post('/students/bulk-eligibility', data);
+                    if (response.data.success) {
+                        setMessage({
+                            type: 'success',
+                            text: response.data.message
+                        });
+                        fetchStudents();
+                    }
+                } catch (error) {
+                    setMessage({ type: 'error', text: error.response?.data?.message || 'Error updating eligibility.' });
+                } finally {
+                    setLoading(false);
+                    e.target.value = '';
+                }
+            }
+        };
+        reader.readAsText(file);
+    };
+
     const renderStudentTable = () => {
         const filteredStudents = studentList.filter(student => {
             const matchesDivision = filterDivision === 'All' || student.division === filterDivision;
@@ -447,6 +498,23 @@ const StudentRegistration = () => {
         document.body.removeChild(link);
     };
 
+    const downloadDefaulterTemplate = () => {
+        const headers = ["GR No", "Defaulter (Yes/No)"];
+        const sampleData = ["SE2025001,Yes", "SE2025002,No"];
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + sampleData.join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "defaulter_list_template.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="student-registration">
             <h2 className="page-title">Student Registration</h2>
@@ -481,26 +549,53 @@ const StudentRegistration = () => {
 
             {/* Bulk Upload Section */}
             {!editingId && (
-                <div className="bulk-upload-section" style={{ marginBottom: '20px', padding: '15px', border: '1px dashed #ccc', borderRadius: '8px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <h4 style={{ margin: '0' }}>Bulk Upload via CSV</h4>
-                        <button
-                            onClick={downloadSampleCSV}
-                            className="btn btn-sm btn-outline-primary"
-                            style={{ padding: '5px 10px', fontSize: '0.8rem' }}
-                        >
-                            Download Template
-                        </button>
+                <div className="bulk-upload-section" style={{ marginBottom: '20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+
+                    {/* Bulk Register */}
+                    <div style={{ flex: 1, minWidth: '300px', padding: '15px', border: '1px dashed #ccc', borderRadius: '8px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h4 style={{ margin: '0' }}>Bulk Register (CSV)</h4>
+                            <button
+                                onClick={downloadSampleCSV}
+                                className="btn btn-sm btn-outline-primary"
+                                style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                            >
+                                Download Template
+                            </button>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
+                            Format: GR No, Roll No, Username, Password, Department, Class, Division, Batch, Eligibility, Elective
+                        </p>
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileUpload}
+                            style={{ display: 'inline-block', width: '100%' }}
+                        />
                     </div>
-                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
-                        Format: GR No, Roll No, Username, Password, Department, Class, Division, Practical Batch, Eligibility, Elective Selected
-                    </p>
-                    <input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                        style={{ display: 'inline-block' }}
-                    />
+
+                    {/* Defaulter List */}
+                    <div style={{ flex: 1, minWidth: '300px', padding: '15px', border: '1px dashed #e74c3c', borderRadius: '8px', textAlign: 'center', backgroundColor: '#fdf2f2' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h4 style={{ margin: '0', color: '#c0392b' }}>Upload Defaulter List</h4>
+                            <button
+                                onClick={downloadDefaulterTemplate}
+                                className="btn btn-sm btn-outline-danger"
+                                style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                            >
+                                Download Template
+                            </button>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
+                            Format: GR No, Defaulter (Yes/No)
+                        </p>
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleDefaulterFileUpload}
+                            style={{ display: 'inline-block', width: '100%' }}
+                        />
+                    </div>
                 </div>
             )}
 

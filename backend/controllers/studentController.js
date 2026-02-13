@@ -479,3 +479,48 @@ export const resetPassword = async (req, res) => {
         });
     }
 };
+
+// @desc    Bulk update student eligibility based on defaulter list
+// @route   POST /api/students/bulk-eligibility
+// @access  Private (Admin)
+export const bulkUpdateEligibility = async (req, res) => {
+    try {
+        const defaulterList = req.body; // Expecting array of { grNo, defaulter }
+
+        if (!Array.isArray(defaulterList) || defaulterList.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid defaulter list',
+            });
+        }
+
+        const bulkOps = defaulterList.map((entry) => {
+            // "Yes" -> Defaulter -> Not Eligible (false)
+            // "No" -> Not Defaulter -> Eligible (true)
+            const isDefaulter = entry.defaulter?.trim().toLowerCase() === 'yes';
+            const eligibility = !isDefaulter;
+
+            return {
+                updateOne: {
+                    filter: { grNo: entry.grNo?.trim().toUpperCase() },
+                    update: { $set: { eligibility: eligibility } },
+                },
+            };
+        });
+
+        const result = await Student.bulkWrite(bulkOps);
+
+        return res.status(200).json({
+            success: true,
+            message: `Processed ${defaulterList.length} records. Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`,
+            result,
+        });
+    } catch (error) {
+        console.error('Bulk eligibility update error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error updating eligibility',
+            error: error.message,
+        });
+    }
+};
